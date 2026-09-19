@@ -32,7 +32,7 @@ import {
   type ToolPart,
 } from "@/components/ai-elements/tool";
 import { ToolResult } from "@/components/chat/results";
-import { WorkingLine } from "@/components/chat/working";
+import { Scrooge, WorkingLine } from "@/components/chat/working";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { CHAT_API_PATH } from "@/lib/chat-backend";
@@ -41,7 +41,6 @@ import { useShowToolCalls } from "@/lib/settings";
 const SUGGESTIONS = [
   "Who got the most money from Camden in 2024?",
   "What did Richmond pay Achieving for Children in 2023?",
-  "Which spent more per resident in 2025: Richmond, Camden or Islington?",
   "How has Islington's spending changed year by year since 2020?",
 ];
 
@@ -63,6 +62,19 @@ function ToolCard({ part }: { part: ToolPart }) {
       </ToolContent>
     </Tool>
   );
+}
+
+/**
+ * What opens an assistant message: Scrooge, who stays there once the answer is
+ * done, so every answer in the conversation keeps him. While the answer is being
+ * written he is the working line. A running tool call says what it is doing in
+ * a line of its own further down, so here he is at the books with no text.
+ */
+function AnswerHeader({ isLive, isResponding }: { isLive: boolean; isResponding: boolean }) {
+  if (isLive && isResponding) {
+    return <WorkingLine pose="thinking" text="Writing it up" />;
+  }
+  return <Scrooge pose="checking" />;
 }
 
 export function Chat() {
@@ -99,6 +111,17 @@ export function Chat() {
   }, [clearError, regenerate]);
 
   const isEmpty = messages.length === 0;
+
+  // A running tool call draws its own line. Any other moment of a streaming
+  // answer, the text being written or the pause between two steps, gets this one.
+  const lastMessage = messages.at(-1);
+  const lastPart = lastMessage?.role === "assistant" ? lastMessage.parts.at(-1) : undefined;
+  const toolRunning =
+    lastPart !== undefined &&
+    isToolUIPart(lastPart) &&
+    (lastPart.state === "input-streaming" || lastPart.state === "input-available");
+  const isBusy = status === "submitted" || status === "streaming";
+  const isResponding = status === "streaming" && !toolRunning;
 
   return (
     <div className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col gap-3 px-3 pb-4 sm:px-6">
@@ -137,6 +160,12 @@ export function Chat() {
           {messages.map((message) => (
             <Message from={message.role} key={message.id}>
               <MessageContent className={message.role === "assistant" ? "w-full" : undefined}>
+                {message.role === "assistant" ? (
+                  <AnswerHeader
+                    isLive={message === lastMessage && isBusy}
+                    isResponding={isResponding}
+                  />
+                ) : null}
                 {message.parts.map((part, index) => {
                   const key = `${message.id}-${index}`;
 

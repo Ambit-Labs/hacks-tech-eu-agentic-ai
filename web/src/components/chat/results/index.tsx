@@ -154,7 +154,7 @@ function AgentResult({ name, part }: { name: AgentToolName; part: ToolPart }) {
   const args: ToolInput = input.success ? input.data : {};
 
   if (part.state === "input-streaming" || part.state === "input-available") {
-    return <WorkingLine text={RUNNING[name](args)} />;
+    return <WorkingLine mascot={false} text={RUNNING[name](args)} />;
   }
 
   if (part.state === "output-error") {
