@@ -40,9 +40,9 @@ import { useShowToolCalls } from "@/lib/settings";
 
 const SUGGESTIONS = [
   "Who got the most money from Camden in 2024?",
-  "How much did London boroughs pay Capita in 2022?",
-  "Which spent more per resident in 2025: Camden, Lambeth or Barnet?",
-  "How has Barnet's spending changed year by year since 2015?",
+  "What did Richmond pay Achieving for Children in 2023?",
+  "Which spent more per resident in 2025: Richmond, Camden or Islington?",
+  "How has Islington's spending changed year by year since 2020?",
 ];
 
 /** One tool call: name, status badge, the input it was given and what it returned. */
