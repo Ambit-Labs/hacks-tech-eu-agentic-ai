@@ -109,6 +109,11 @@ async def test_spend_by_limit_is_clamped(ctx):
     assert len(result.rows) == 1
 
 
+async def test_spend_by_empty(ctx):
+    result = await spend_by(ctx, "hackney", date(2019, 9, 1), date(2019, 10, 31), group_by="supplier")
+    assert result.rows == []
+
+
 from tools import ALL_TOOLS, compare_boroughs, largest_payments, search_payments, supplier_payments
 
 
@@ -136,6 +141,11 @@ async def test_supplier_payments_none(ctx):
     assert result.rows == []
 
 
+async def test_supplier_payments_rejects_punctuation_only_text(ctx):
+    with pytest.raises(ModelRetry):
+        await supplier_payments(ctx, "&", date(2019, 9, 1), date(2019, 10, 31))
+
+
 async def test_largest_payments_across_boroughs(ctx):
     result = await largest_payments(ctx, date(2019, 9, 1), date(2019, 10, 31), limit=3)
     assert [(r.borough, r.amount_gbp) for r in result.rows] == [
@@ -154,6 +164,13 @@ async def test_largest_payments_with_min_amount_and_borough(ctx):
     assert [r.amount_gbp for r in result.rows] == [2500.0, 1500.0, 1200.0, 1000.0]
 
 
+async def test_largest_payments_empty(ctx):
+    result = await largest_payments(ctx, date(2019, 9, 1), date(2019, 10, 31), borough="hackney")
+    assert result.rows == []
+    assert result.payments == 0
+    assert result.total_gbp == 0.0
+
+
 async def test_search_payments_matches_purpose_supplier_or_department(ctx):
     by_purpose = await search_payments(ctx, "construction", date(2019, 9, 1), date(2019, 10, 31))
     assert {r.supplier for r in by_purpose.rows} == {"BIG BUILD CONSTRUCTION LTD", "Big Build Construction Ltd"}
@@ -169,6 +186,18 @@ async def test_search_payments_limit(ctx):
     result = await search_payments(ctx, "a", date(2019, 9, 1), date(2019, 10, 31), limit=2)
     assert len(result.rows) == 2
     assert result.payments > 2
+
+
+async def test_search_payments_empty(ctx):
+    result = await search_payments(ctx, "zzz no such thing", date(2019, 9, 1), date(2019, 10, 31))
+    assert result.rows == []
+    assert result.payments == 0
+    assert result.total_gbp == 0.0
+
+
+async def test_search_payments_rejects_punctuation_only_text(ctx):
+    with pytest.raises(ModelRetry):
+        await search_payments(ctx, "%", date(2019, 9, 1), date(2019, 10, 31))
 
 
 async def test_compare_boroughs_totals_and_per_resident(ctx):
@@ -189,6 +218,13 @@ async def test_compare_boroughs_with_purpose_filter(ctx):
     assert rows["islington"].total_gbp == 3700.0
     assert rows["camden"].total_gbp == 0.0
     assert result.matched.purposes == ["Agency Staff"]
+
+
+async def test_compare_boroughs_counts_a_repeated_borough_once(ctx):
+    result = await compare_boroughs(ctx, ["camden", "Camden "], date(2019, 9, 1), date(2019, 10, 31))
+    assert len(result.rows) == 1
+    assert result.rows[0].total_gbp == 14000.0
+    assert result.rows[0].payments == 10
 
 
 async def test_compare_boroughs_unknown_borough_has_no_population(ctx):

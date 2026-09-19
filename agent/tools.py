@@ -133,7 +133,9 @@ def _filters(
         clauses.append("borough = %(borough)s")
         params["borough"] = slug
     if boroughs is not None:
-        slugs = [slug for b in boroughs if (slug := _slug(b))]
+        # dict.fromkeys keeps the first occurrence of each slug, so asking for
+        # the same borough twice compares it once instead of doubling it.
+        slugs = list(dict.fromkeys(slug for b in boroughs if (slug := _slug(b))))
         if not slugs:
             raise ModelRetry("boroughs must list at least one borough slug")
         clauses.append("borough = ANY(%(boroughs)s)")
@@ -146,18 +148,28 @@ def _filters(
     if purpose_like:
         clauses.append("upper(purpose) LIKE upper(%(purpose_like)s)")
         params["purpose_like"] = _like(purpose_like)
-    if supplier_like:
+    if supplier_like is not None:
+        # _norm drops every non-alphanumeric run, so punctuation on its own
+        # would leave the pattern '%%', which matches every payment ever made.
+        normalised = _norm(supplier_like)
+        if not normalised:
+            raise ModelRetry("supplier_like needs at least one letter or digit")
         clauses.append("supplier_norm LIKE %(supplier_like)s")
-        params["supplier_like"] = _like(_norm(supplier_like))
+        params["supplier_like"] = _like(normalised)
     if min_amount is not None:
         clauses.append("amount_gbp >= %(min_amount)s")
         params["min_amount"] = min_amount
-    if text:
+    if text is not None:
+        # Same trap as supplier_like: the supplier half of this OR would match
+        # everything if the search text normalised away to nothing.
+        normalised = _norm(text)
+        if not normalised:
+            raise ModelRetry("text needs at least one letter or digit to search for")
         clauses.append(
             "(supplier_norm LIKE %(text_norm)s OR upper(purpose) LIKE upper(%(text)s)"
             f" OR {DEPARTMENT_EXPR} LIKE upper(%(text)s))"
         )
-        params["text_norm"] = _like(_norm(text))
+        params["text_norm"] = _like(normalised)
         params["text"] = _like(text)
     return " AND ".join(clauses), params
 
@@ -373,7 +385,7 @@ async def supplier_payments(
     )
     rows = await ctx.deps.db.fetch_all(
         f"SELECT {PAYMENT_COLUMNS} FROM payments WHERE {where}"
-        f" ORDER BY payment_date DESC, amount_gbp DESC LIMIT {ROW_LIMIT}",
+        f" ORDER BY payment_date DESC, amount_gbp DESC, id LIMIT {ROW_LIMIT}",
         params,
     )
     s = summary[0]
@@ -398,7 +410,7 @@ async def largest_payments(
     department_like: str | None = None,
     purpose_like: str | None = None,
 ) -> Payments:
-    """The biggest single payments between two dates, largest first, in one borough or across all of them. Narrow with a minimum amount or a substring of the department or purpose."""
+    """The biggest single payments between two dates, largest first, in one borough or across all of them. Narrow with a minimum amount or a substring of the department or purpose. total_gbp and payments cover every matching payment, not only the rows returned."""
     where, params = _filters(
         period_from=period_from,
         period_to=period_to,
@@ -408,7 +420,7 @@ async def largest_payments(
         purpose_like=purpose_like,
     )
     return await _payment_set(
-        ctx.deps.db, where, params, order="amount_gbp DESC, payment_date DESC", limit=limit
+        ctx.deps.db, where, params, order="amount_gbp DESC, payment_date DESC, id", limit=limit
     )
 
 
@@ -421,12 +433,12 @@ async def search_payments(
     min_amount: float | None = None,
     limit: int = 50,
 ) -> Payments:
-    """Payments whose supplier, purpose or department contains the given text, between two dates. Use it for "show me the payments for" questions about a topic such as parks, roads, libraries or consultants."""
+    """Payments whose supplier, purpose or department contains the given text, between two dates. Use it for "show me the payments for" questions about a topic such as parks, roads, libraries or consultants. total_gbp and payments cover every matching payment, not only the rows returned."""
     where, params = _filters(
         period_from=period_from, period_to=period_to, borough=borough, min_amount=min_amount, text=text
     )
     return await _payment_set(
-        ctx.deps.db, where, params, order="payment_date DESC, amount_gbp DESC", limit=limit
+        ctx.deps.db, where, params, order="payment_date DESC, amount_gbp DESC, id", limit=limit
     )
 
 
@@ -453,7 +465,7 @@ async def compare_boroughs(
         " coalesce(sum(p.amount_gbp), 0) AS total, count(p.id) AS n"
         " FROM unnest(%(boroughs)s::text[]) AS asked(slug)"
         " LEFT JOIN boroughs b ON b.slug = asked.slug"
-        f" LEFT JOIN payments p ON p.borough = asked.slug AND {where}"
+        f" LEFT JOIN payments p ON p.borough = asked.slug AND ({where})"
         " GROUP BY asked.slug, b.population ORDER BY total DESC",
         params,
     )
@@ -466,7 +478,7 @@ async def compare_boroughs(
         population = r["population"]
         out.append(
             ComparisonRow(
-                borough=r["borough"] or "",
+                borough=r["borough"],
                 total_gbp=total,
                 payments=r["n"],
                 population=population,
