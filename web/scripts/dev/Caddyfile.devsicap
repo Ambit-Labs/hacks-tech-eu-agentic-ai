@@ -1,0 +1,19 @@
+# hacks-tech-eu-agentic-ai web dev on the devsicap box: `bun run dev` listens on
+# 127.0.0.1:3020 only, Caddy serves it over https on the tailnet IP (same port,
+# different address). Certificate comes from Caddy's internal CA; its root.crt
+# must be trusted on the machine opening the browser. The bare MagicDNS name
+# is listed too, because home routers with DNS rebind protection refuse the
+# public sicap.ai name (it resolves to a CGNAT 100.64/10 address) while
+# MagicDNS answers `devsicap` on any tailnet device. The long form
+# devsicap.merino-pangolin.ts.net is not usable here: Caddy hands *.ts.net
+# names to tailscaled for certificates and tailscaled denies the caddy user.
+#
+# Install once:
+#   sudo tee -a /etc/caddy/Caddyfile < scripts/dev/Caddyfile.devsicap
+#   sudo caddy validate --config /etc/caddy/Caddyfile --adapter caddyfile
+#   sudo systemctl reload caddy
+https://devsicap.ts.sicap.ai:3020, https://devsicap:3020, https://100.77.15.4:3020 {
+	bind 100.77.15.4
+	tls internal
+	reverse_proxy 127.0.0.1:3020
+}

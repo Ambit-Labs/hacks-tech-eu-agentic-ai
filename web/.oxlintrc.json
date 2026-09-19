@@ -1,0 +1,25 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": ["eslint", "typescript", "oxc", "unicorn", "import", "react", "jsx-a11y", "nextjs"],
+  "categories": {
+    "correctness": "error"
+  },
+  "env": {
+    "builtin": true,
+    "browser": true,
+    "node": true
+  },
+  "settings": {
+    "react": {
+      "version": "19.2"
+    }
+  },
+  "rules": {},
+  "ignorePatterns": [
+    ".next",
+    "node_modules",
+    "next-env.d.ts",
+    "src/components/ui",
+    "src/components/ai-elements"
+  ]
+}
