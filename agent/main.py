@@ -1,82 +1,78 @@
 """The chat agent, served over HTTP.
 
-One Pydantic AI agent with no tools, no memory and no structured output: it
-takes the chat messages and streams text back. The Vercel AI adapter speaks the
-data-stream protocol the web app's `useChat` already understands, so the
-Next.js side only has to point at this server.
+`POST /chat` takes AI SDK messages and streams the answer back in the Vercel
+data-stream protocol, which the web app's `useChat` reads. The agent's tools
+query Postgres; the pool is opened in the lifespan and handed to each run as
+deps.
 
-`app` is a module-level FastAPI instance because Vercel's Python runtime looks
-for that name in `main.py`.
+`app` is a module-level FastAPI instance because Vercel's Python runtime
+looks for that name in `main.py`.
 """
 
-import os
+from __future__ import annotations
+
+from contextlib import asynccontextmanager
+from collections.abc import AsyncIterator
 
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
-from pydantic_ai import Agent
-from pydantic_ai.models.google import GoogleModel
-from pydantic_ai.providers.google import GoogleProvider
 from pydantic_ai.ui.vercel_ai import VercelAIAdapter
 from starlette.requests import Request
 from starlette.responses import Response
 
-# Kept in step with web/src/lib/model.ts, which picks the same model for the
-# TypeScript route.
-MODEL_ID = "gemini-3.8-flash"
-
-# GoogleProvider reads GOOGLE_API_KEY on its own. The repo names the key after
-# the console it comes from, so the value is passed to the provider explicitly.
-API_KEY_ENV = "GOOGLE_AI_STUDIO_KEY"
-
-INSTRUCTIONS = (
-    "You are a concise assistant. Answer in short markdown, a few sentences at most."
-)
+from agent import build_agent, build_model
+from config import DATABASE_URL_ENV, Settings
+from db import Database
+from tools import Deps
 
 # The web app runs AI SDK 7. The adapter's v7 wire is identical to v6's today,
 # but passing the client's real major keeps both ends on the same value.
 SDK_VERSION = 7
 
-app = FastAPI()
 
-_agent: Agent | None = None
+@asynccontextmanager
+async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+    settings = Settings.from_env()
+    app.state.settings = settings
+    app.state.agent = build_agent(build_model(settings))
+    app.state.db = None
+    if settings.database_url:
+        app.state.db = Database(settings.database_url)
+        await app.state.db.open()
+    try:
+        yield
+    finally:
+        if app.state.db is not None:
+            await app.state.db.close()
 
 
-def get_agent() -> Agent:
-    """Builds the agent once. Raises `RuntimeError` when the API key is missing."""
-    global _agent
+app = FastAPI(lifespan=lifespan)
 
-    if _agent is None:
-        api_key = os.environ.get(API_KEY_ENV)
 
-        if not api_key:
-            raise RuntimeError(f"{API_KEY_ENV} is not set.")
-
-        _agent = Agent(
-            GoogleModel(MODEL_ID, provider=GoogleProvider(api_key=api_key)),
-            instructions=INSTRUCTIONS,
-        )
-
-    return _agent
+def _error(message: str, status: int = 500) -> JSONResponse:
+    return JSONResponse({"error": message}, status_code=status)
 
 
 @app.post("/chat")
 async def chat(request: Request) -> Response:
-    try:
-        agent = get_agent()
-    except RuntimeError:
-        return JSONResponse(
-            {
-                "error": (
-                    f"The server is missing {API_KEY_ENV}. Add it to .env.local and "
-                    "restart the agent."
-                )
-            },
-            status_code=500,
+    db: Database | None = request.app.state.db
+    if db is None:
+        return _error(
+            f"The server is missing {DATABASE_URL_ENV}. Add it to .env.local and restart the agent."
         )
-
-    return await VercelAIAdapter.dispatch_request(request, agent=agent, sdk_version=SDK_VERSION)
+    return await VercelAIAdapter.dispatch_request(
+        request,
+        agent=request.app.state.agent,
+        deps=Deps(db=db),
+        sdk_version=SDK_VERSION,
+    )
 
 
 @app.get("/health")
-async def health() -> dict[str, str]:
-    return {"status": "ok", "model": MODEL_ID}
+async def health(request: Request) -> dict[str, object]:
+    settings: Settings = request.app.state.settings
+    return {
+        "status": "ok",
+        "model": settings.model,
+        "database": request.app.state.db is not None,
+    }
