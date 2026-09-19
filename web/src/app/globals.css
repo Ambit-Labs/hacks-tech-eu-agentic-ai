@@ -68,42 +68,46 @@
 }
 
 :root {
-  /* Sampled from public/scrooge-ui-demo.png: warm paper surfaces, navy ink,
-     terracotta actions. Hex equivalents sit next to the tokens they came from. */
-  --background: oklch(0.991 0.003 84.6); /* #fdfcfa main pane */
-  --foreground: oklch(0.203 0.047 262.9); /* #0b162c ink */
-  --card: oklch(0.988 0.003 84.6); /* #fcfbf9 evidence cards */
-  --card-foreground: oklch(0.203 0.047 262.9);
-  --popover: oklch(0.991 0.003 84.6);
-  --popover-foreground: oklch(0.203 0.047 262.9);
-  --primary: oklch(0.568 0.109 35); /* #ad5d49 New chat and send buttons */
+  /* The deck palette: warm off-white app, white content surfaces, charcoal
+     text, terracotta brand, sand borders. Hex equivalents sit next to the
+     tokens they came from. Tokens without a hex are derived from the palette. */
+  --background: oklch(0.968 0.011 84.6); /* #f8f4ec warm off-white */
+  --foreground: oklch(0.326 0.004 67.7); /* #363432 charcoal */
+  --card: oklch(1 0 0); /* #ffffff content surfaces */
+  --card-foreground: oklch(0.326 0.004 67.7);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0.326 0.004 67.7);
+  /* The darker terracotta, so white button text holds 5.8:1. The brand
+     terracotta #b87560 only reaches 3.3:1 and goes to --ring and the charts. */
+  --primary: oklch(0.518 0.094 38.4); /* #96543f */
   --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(0.956 0.006 31.1); /* #f4efee user bubble */
-  --secondary-foreground: oklch(0.203 0.047 262.9);
-  --muted: oklch(0.97 0.001 286.4); /* #f5f5f6 assistant bubble */
-  --muted-foreground: oklch(0.502 0.024 264.3); /* #5d6472 captions, timestamps */
-  --accent: oklch(0.943 0.007 53.4); /* #f0ebe8 selected chat row */
-  --accent-foreground: oklch(0.203 0.047 262.9);
+  /* A sand tint. Cream #f8efdb was tried here and vanished on the off-white. */
+  --secondary: oklch(0.905 0.022 79); /* #e8ded0 user bubble */
+  --secondary-foreground: oklch(0.326 0.004 67.7);
+  --muted: oklch(0.942 0.016 82.8); /* #f1ebe0, between off-white and sand */
+  --muted-foreground: oklch(0.546 0.019 61.7); /* #796e65 warm grey */
+  --accent: oklch(0.93 0.022 83.3); /* #efe7d8 hover and selected rows */
+  --accent-foreground: oklch(0.326 0.004 67.7);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.901 0.004 286.3); /* #dedee1 card outline */
-  --input: oklch(0.894 0.003 264.5); /* #dbdcde composer outline */
-  --ring: oklch(0.568 0.109 35);
+  --border: oklch(0.859 0.022 76.5); /* #d9cfc1 sand */
+  --input: oklch(0.859 0.022 76.5);
+  --ring: oklch(0.628 0.091 38.2); /* #b87560 terracotta */
   /* One terracotta ramp. chart-5 is the strongest end and matches --primary,
-     chart-1 the faintest. */
-  --chart-1: oklch(0.92 0.03 35);
-  --chart-2: oklch(0.83 0.06 35);
-  --chart-3: oklch(0.74 0.085 35);
-  --chart-4: oklch(0.65 0.1 35);
-  --chart-5: oklch(0.568 0.109 35);
+     chart-4 is the brand terracotta, chart-1 the faintest. */
+  --chart-1: oklch(0.92 0.03 38.3);
+  --chart-2: oklch(0.83 0.055 38.3);
+  --chart-3: oklch(0.73 0.075 38.3);
+  --chart-4: oklch(0.628 0.091 38.2);
+  --chart-5: oklch(0.518 0.094 38.4);
   --radius: 0.625rem;
-  --sidebar: oklch(0.974 0.006 84.6); /* #f8f6f2 */
-  --sidebar-foreground: oklch(0.203 0.047 262.9);
-  --sidebar-primary: oklch(0.568 0.109 35);
+  --sidebar: oklch(0.954 0.028 86.6); /* #f8efdb cream */
+  --sidebar-foreground: oklch(0.326 0.004 67.7);
+  --sidebar-primary: oklch(0.518 0.094 38.4);
   --sidebar-primary-foreground: oklch(1 0 0);
-  --sidebar-accent: oklch(0.943 0.007 53.4);
-  --sidebar-accent-foreground: oklch(0.203 0.047 262.9);
-  --sidebar-border: oklch(0.95 0.006 75.4); /* #f1eeea */
-  --sidebar-ring: oklch(0.568 0.109 35);
+  --sidebar-accent: oklch(0.93 0.022 83.3);
+  --sidebar-accent-foreground: oklch(0.326 0.004 67.7);
+  --sidebar-border: oklch(0.859 0.022 76.5);
+  --sidebar-ring: oklch(0.628 0.091 38.2);
 }
 
 .dark {
