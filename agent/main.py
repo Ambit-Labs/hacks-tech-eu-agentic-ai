@@ -20,6 +20,7 @@ from pydantic_ai.ui.vercel_ai import VercelAIAdapter
 from starlette.requests import Request
 from starlette.responses import Response
 
+import observability
 from agent import build_agent, build_model
 from config import DATABASE_URL_ENV, Settings
 from db import Database
@@ -47,6 +48,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(lifespan=lifespan)
+observability.setup(Settings.from_env(), app)
 
 
 def _error(message: str, status: int = 500) -> JSONResponse:
