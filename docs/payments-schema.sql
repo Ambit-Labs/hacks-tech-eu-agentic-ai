@@ -64,8 +64,17 @@ FROM payments
 GROUP BY borough, month;
 
 -- The agent connects as this role. It can read, and nothing else.
-CREATE ROLE scrooge_reader NOLOGIN;
+-- Roles are per cluster, not per database, so on a server that has already had
+-- this schema applied to another database, or has been restored from a dump
+-- that carried the role, a bare CREATE ROLE would abort the whole file.
+DO $$ BEGIN
+    CREATE ROLE scrooge_reader NOLOGIN;
+EXCEPTION WHEN duplicate_object THEN NULL;
+END $$;
 GRANT USAGE ON SCHEMA public TO scrooge_reader;
 GRANT SELECT ON boroughs, source_files, payments, coverage TO scrooge_reader;
 ALTER ROLE scrooge_reader SET statement_timeout = '10s';
--- CREATE ROLE agent LOGIN PASSWORD '...' IN ROLE scrooge_reader;   -- done by hand, password never in the repo
+-- Done by hand, password never in the repo. The timeout is repeated because a
+-- role setting applies to the login role only and membership does not pass it on.
+-- CREATE ROLE agent LOGIN PASSWORD '...' IN ROLE scrooge_reader;
+-- ALTER ROLE agent SET statement_timeout = '10s';

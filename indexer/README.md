@@ -1,16 +1,22 @@
 # scrooge-indexer
 
-Downloads what London boroughs publish about their money and saves it byte for
-byte on disk. Two kinds of thing:
+Downloads what London boroughs publish about their money, saves it byte for
+byte on disk, and reads the payment files into Postgres. Two kinds of thing
+come down:
 
 - **spend**: the transaction-level files published under the transparency code,
   every payment over £500 and over £250 in some boroughs.
 - **budget**: planned spend, from each council's own budget book and from the
   MHCLG returns that carry all 33 boroughs in one national file.
 
-No parsing, no column renaming, no re-encoding. The BOM Richmond puts on its
-CSVs is still there after the download, because a later stage that has to
-reconcile 33 different schemas needs the original bytes to argue with.
+The download does no parsing, no column renaming and no re-encoding. The BOM
+Richmond puts on its CSVs is still there afterwards, because the stage that
+has to reconcile 33 different schemas needs the original bytes to argue with.
+
+That stage is `scrooge load`, and it is where the 33 schemas become one table.
+Which published column becomes which typed column is settled in
+[docs/payments-schema.md](../docs/payments-schema.md) rather than here; the
+loader is that table written as code.
 
 One source is one file in `src/scrooge_indexer/boroughs/`. Adding the 34th
 borough, or the next budget publisher, means writing that file and nothing
@@ -42,8 +48,28 @@ uv run scrooge download mhclg           # a slug works whatever --kind says
 not already on disk. Re-running is safe and cheap: a file recorded as complete
 in the manifest and still present on disk is skipped without a request.
 
-Flags, defaults, recovery and the cron lines are in
-[docs/runbook.md](docs/runbook.md).
+Three more verbs read those files into Postgres:
+
+```sh
+export DATABASE_URL="$(cd ../infra && uv run pg url)"
+uv run scrooge db init                  # schema once, then the 33 boroughs
+uv run scrooge load camden --since 2019-09 --until 2019-09
+uv run scrooge load --all               # every borough on disk
+uv run scrooge load-status --problems   # per borough, and what did not load
+```
+
+`DATABASE_URL` comes from the environment, or from `.env` and `.env.local` in
+the repo root when the shell has none. The Modal tunnel gets a new host and
+port on every restart, so there is no host, port or password anywhere in this
+repo, and the startup line prints the password as `***`.
+
+One file is one transaction: its old rows are deleted, its `source_files` row
+is written, the new rows go in with `COPY`, and the outcome is recorded. A run
+killed halfway leaves the file in flight absent rather than half present, so
+rerunning the same command is the whole of the recovery procedure.
+
+Flags, defaults, cold start, the bulk-load procedure, recovery and the cron
+lines are in [docs/runbook.md](docs/runbook.md).
 
 ## Kinds
 
@@ -312,6 +338,37 @@ a cumulative year-to-date export or the month still being added to. Mutable
 files are re-checked on every run, with a conditional request when the server
 supports one, and replaced when the bytes changed. They are never appended to.
 
+## The loader
+
+`src/scrooge_indexer/loader/` is six modules in the order a file passes
+through them.
+
+`mappings.py` is the table from `docs/payments-schema.md` written as tuples,
+one entry per borough and layout. The doc's own column name is first in every
+tuple; the spellings after it are ones real files use and each carries a
+comment naming the borough and the months it came from. A borough with two
+layouts gets two entries and the header decides which one fits.
+
+`readers.py` answers the three questions no file states: which encoding, which
+delimiter, which line is the header. Encoding is decided by decoding the whole
+file as UTF-8 and falling back to cp1252, because a 20 MB file that is clean
+for its first megabyte and cp1252 near the end would otherwise fail halfway
+through a `COPY`. The header is the first row carrying one of the borough's
+date column names, which covers the Bexley and Brent title rows, Lewisham's
+row 3 header and the two Hounslow files that open with a leaked SQL query.
+
+`values.py` holds the date, amount and financial-year rules, strictly. A cell
+that matches none of the listed forms fails its row rather than being coerced
+into something plausible, and day always comes before month.
+
+`rows.py` builds the tuples and counts what it drops. `db.py` writes them.
+`runner.py` decides skip, load or fail for one file, and `files.py` walks
+`data/raw/`.
+
+Adding a borough to the loader is one entry in `LAYOUTS` plus its row in the
+schema doc. Adding a date form means adding it to `values.py` with a comment
+saying which file needed it, and saying so in the doc too.
+
 ## Not covered
 
 Five boroughs block automated requests and are deliberately left out of the
@@ -328,5 +385,20 @@ uv run pytest -q
 uv run ruff check . && uv run ruff format --check .
 ```
 
-Every test runs against `httpx.MockTransport`. Nothing in the suite touches the
-network, so a broken council website cannot turn the suite red.
+Every download test runs against `httpx.MockTransport`, and the loader tests
+build their fixtures from inline strings in `tmp_path`. Nothing in the default
+suite touches the network, opens a real spend file or needs a database, so a
+broken council website cannot turn the suite red.
+
+The database tests need a Postgres 17 to create and drop a database on:
+
+```sh
+docker run -d --name scrooge-loader-test -e POSTGRES_PASSWORD="$PGPASS" \
+    -p 127.0.0.1:55432:5432 postgres:17
+export SCROOGE_TEST_DATABASE_URL="postgresql://postgres:$PGPASS@127.0.0.1:55432/postgres"
+uv run pytest -q
+```
+
+They work in their own `scrooge_loader_tests` database, so they cannot touch a
+real load on the same server, and they skip with a message when the variable
+is unset or the server is unreachable.

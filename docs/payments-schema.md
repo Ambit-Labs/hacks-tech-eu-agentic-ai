@@ -19,12 +19,12 @@ by the header text exactly as it appeared in the file.
 | `payment_date` | The date the borough attached to the payment | never, but see date rules |
 | `financial_year` | `2019/20` style, April to March, derived from `payment_date` | never |
 | `supplier` | Beneficiary as published | never |
-| `directorate` | Top organisational level | Brent |
-| `department` | Second level: service, division, cost centre | Barnet (old), Brent, Camden, Haringey, Newham, Richmond, Wandsworth, Westminster |
-| `purpose` | Expense type, subjective, activity or free text | never |
+| `directorate` | Top organisational level | Brent, Bexley before 2014-04, Lambeth 2014-08 to 2015-03 and 2017 |
+| `department` | Second level: service, division, cost centre | Camden, Haringey, Havering (new), Islington from 2024-Q3, Lambeth before 2017, Newham, Richmond, Wandsworth, Westminster |
+| `purpose` | Expense type, subjective, activity or free text | Havering 2011-05, Lambeth 2021-Q2 and 2022-Q4; blank in 43% of Westminster rows |
 | `amount_gbp` | Net amount; negatives kept as negatives | never |
-| `vat_gbp` | Irrecoverable VAT | everyone except Bexley, Brent, Camden, Havering (new), Hounslow, Newham |
-| `reference` | Transaction, invoice or payment number | Brent, Haringey, Islington, Lewisham, Newham, Richmond, Wandsworth, Westminster |
+| `vat_gbp` | Irrecoverable VAT | everyone except Bexley from 2015-04, Brent, Camden, Havering (new), Hounslow, Newham |
+| `reference` | Transaction, invoice or payment number | Brent, Haringey, Havering (new), Islington, Lambeth before 2017, Lewisham, Newham, Richmond, Wandsworth, Westminster |
 
 ## Column mapping per borough
 
@@ -75,10 +75,22 @@ Dates. Parse these forms, in this order, and fail the row on anything else:
 datetime cells. Day comes before month everywhere. A literal `N/A` (Havering)
 fails the row.
 
+One exception, decided per file and only for the slash form. A file is read
+month first when at least one of its slash dates has a second number above 12
+and none has a first number above 12; a file with both kinds contradicts
+itself and fails. Lambeth `2020-Q2__ec-over-500-report-q2-2020-21.csv` is the
+only file on disk that qualifies, and a file read this way records the fact in
+`source_files.reason`.
+
 Amounts. Strip everything before the first digit or minus sign, including
 `£`, spaces and the `œ` mojibake that stands for `£` in a few old Bexley and
-Havering files. Remove thousands commas. `-1,040.22` and `-£177,790.95` are
-negatives; no borough uses parentheses. Store two decimals.
+Havering files. Remove thousands commas, which must each stand in front of
+exactly three digits: `1.234,56` and `1,23` are another notation and fail the
+row rather than load as 1.23 and 123.00. `-1,040.22` and `-£177,790.95` are
+negatives, and so is the accounting form in brackets: `(1,040.22)` and
+`(£1,040.22)` both read as -1040.22. Two boroughs write it, Lambeth in its
+four 2015-16 quarters and Barnet in every month from 2017-06 to 2018-06, 5,967
+rows between them. Store two decimals.
 
 Financial year. April to March. A payment on 2019-09-30 is `2019/20`; one on
 2020-03-31 is also `2019/20`.
@@ -92,7 +104,7 @@ Header typos (`Transcation Number`, `Supplier Numbe`) are kept as published.
 
 ## Files to skip or handle
 
-- Lambeth files with only `Supplier Name, Total` (14 of them) are supplier
+- Lambeth files with only `Supplier Name, Total` (18 of them) are supplier
   totals, not payments. Skip with `status = 'skipped'`.
 - Lambeth `Sum of Invoice Nett Amount` files are aggregates. Skip.
 - Hounslow `2021-03__invoices-over-500-march-2021.csv` and
@@ -106,7 +118,9 @@ Header typos (`Transcation Number`, `Supplier Numbe`) are kept as published.
 - Broken quoting (newline inside an unquoted field): Hounslow 2021-08,
   Havering 2015-08 and 2015-09, Lambeth 2011-11, Newham 2019-02. Load what
   parses, record `status = 'failed'` with the reason if the parser gives up.
-- Newham 2019-02 is tab delimited. Sniff the delimiter per file.
+- Newham `2019-02__paymentstosuppliersfebruary2019.csv` is an Excel 97
+  workbook with a `.csv` extension, which is why it looks tab delimited and
+  badly quoted. Skip it. Still sniff the delimiter per file.
 - Encodings: utf-8, utf-8 with BOM, and cp1252 all occur. Try utf-8-sig
   first, then cp1252.
 - Lewisham xlsx files have a title row and a blank row; the header is row 3.
@@ -118,9 +132,20 @@ The loader session owns the database. It applies `payments-schema.sql` to
 the Modal Postgres once, fills `boroughs`, writes `source_files` and
 `payments`, and creates the login role for the agent:
 
+`CREATE ROLE scrooge_reader` sits in a `DO` block that swallows
+`duplicate_object`. Roles belong to the cluster rather than to one database,
+so applying the file to a second database on the same server, or to a server
+restored from a dump that already carried the role, would otherwise abort the
+whole file on its last two statements. Nothing else about the role changes.
+
 ```sql
 CREATE ROLE agent LOGIN PASSWORD '...' IN ROLE scrooge_reader;
+ALTER ROLE agent SET statement_timeout = '10s';
 ```
+
+The second line is needed. A setting made with `ALTER ROLE ... SET` applies to
+the role a session logs in as, and membership does not pass it on, so the 10
+second limit on `scrooge_reader` alone leaves the `agent` login with none.
 
 The agent session owns `agent/` only. It never runs DDL, never writes rows,
 and connects with the `agent` login through `DATABASE_URL`, which is

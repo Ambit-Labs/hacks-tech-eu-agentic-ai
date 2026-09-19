@@ -34,7 +34,9 @@ PLAIN_INTERVAL = 15.0
 #: the timer. A five-file smoke run should say five things, not one.
 STEPWISE_MAX_TOTAL = 40
 
-#: Fields rendered as live outcome counters, in this order.
+#: Fields rendered as live outcome counters, in this order. A verb with other
+#: outcomes to report passes its own tuple to :func:`make_progress`; the
+#: download's three are the default because it was here first.
 COUNTER_FIELDS = ("ok", "skipped", "failed")
 
 
@@ -66,10 +68,14 @@ class CountersColumn(ProgressColumn):
     council is 404-ing every month.
     """
 
+    def __init__(self, names: tuple[str, ...] = COUNTER_FIELDS) -> None:
+        super().__init__()
+        self._names = names
+
     def render(self, task) -> Text:
         parts = [
-            f"{name} {task.fields[name]}"
-            for name in COUNTER_FIELDS
+            f"{name} {int(task.fields[name]):,}"
+            for name in self._names
             if task.fields.get(name)
         ]
         got = task.fields.get("bytes") or 0
@@ -93,13 +99,13 @@ class ETAColumn(ProgressColumn):
         return Text(f"eta {timedelta(seconds=int(remaining))}", style="cyan")
 
 
-def bar_columns() -> tuple:
+def bar_columns(counters: tuple[str, ...] = COUNTER_FIELDS) -> tuple:
     return (
         SpinnerColumn(),
         TextColumn("[bold blue]{task.description}"),
         BarColumn(),
         MofNCompleteColumn(),
-        CountersColumn(),
+        CountersColumn(counters),
         TimeElapsedColumn(),
         ETAColumn(),
     )
@@ -131,10 +137,14 @@ class PlainProgress:
         *,
         interval: float = PLAIN_INTERVAL,
         clock=time.monotonic,
+        counters: tuple[str, ...] = COUNTER_FIELDS,
+        unit: str = "files",
     ) -> None:
         self._console = console
         self._interval = interval
         self._clock = clock
+        self._counters = counters
+        self._unit = unit
         self._tasks: list[_PlainTask] = []
 
     # -- Progress API ------------------------------------------------------ #
@@ -155,7 +165,7 @@ class PlainProgress:
         task = _PlainTask(description, total, started=now, last_emit=now, fields=fields)
         self._tasks.append(task)
         size = f"{int(total):,}" if total else "?"
-        self._line(f"{description}: starting, {size} files{self._fields(task)}")
+        self._line(f"{description}: starting, {size} {self._unit}{self._fields(task)}")
         return len(self._tasks) - 1
 
     def advance(self, task_id: int, advance: float = 1) -> None:
@@ -208,7 +218,7 @@ class PlainProgress:
     def _fields(self, task: _PlainTask) -> str:
         parts = [
             f"{name}={int(task.fields[name]):,}"
-            for name in COUNTER_FIELDS
+            for name in self._counters
             if task.fields.get(name)
         ]
         got = task.fields.get("bytes") or 0
@@ -220,12 +230,20 @@ class PlainProgress:
         self._console.print(text, highlight=False, markup=False)
 
 
-def make_progress(console: Console, *, interval: float = PLAIN_INTERVAL):
+def make_progress(
+    console: Console,
+    *,
+    interval: float = PLAIN_INTERVAL,
+    counters: tuple[str, ...] = COUNTER_FIELDS,
+    unit: str = "files",
+):
     """A Rich bar when ``console`` is a terminal, :class:`PlainProgress` when not.
 
-    The one call the download loop makes, so "bar interactively, plain lines
-    under cron" is a property of the toolkit rather than of each verb.
+    The one call a long verb makes, so "bar interactively, plain lines under
+    cron" is a property of the toolkit rather than of each verb. ``counters``
+    names the task fields to show live; ``unit`` is what the plain start line
+    counts.
     """
     if console.is_terminal:
-        return Progress(*bar_columns(), console=console, transient=False)
-    return PlainProgress(console, interval=interval)
+        return Progress(*bar_columns(counters), console=console, transient=False)
+    return PlainProgress(console, interval=interval, counters=counters, unit=unit)

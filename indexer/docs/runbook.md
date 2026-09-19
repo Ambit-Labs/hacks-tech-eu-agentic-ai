@@ -3,6 +3,11 @@
 Operating the `scrooge` CLI: every command and flag, what a run leaves behind,
 and how to recover from an interrupted one.
 
+The tool does two jobs. `list`, `download` and `status` fetch what councils
+publish and keep it byte for byte on disk. `db init`, `load` and `load-status`
+read those files into Postgres. The download half needs nothing but the
+network; the load half needs `$DATABASE_URL`.
+
 ## Cold start
 
 ```sh
@@ -11,15 +16,54 @@ uv sync
 uv run scrooge list --kind all
 ```
 
-`uv sync` is the whole setup. There are no API keys, no secrets and no
-binaries to install. `uv run scrooge list --kind all` should print 27
-registered sources with zero files on disk.
+`uv sync` is the whole setup for downloading. There are no API keys, no
+secrets and no binaries to install. `uv run scrooge list --kind all` should
+print 27 registered sources with zero files on disk.
 
-Nothing in this tool authenticates anywhere. If a source ever needs a token
-(Socrata offers app tokens to raise the anonymous rate limit), that will be a
-new environment variable documented here, not a silent addition. GOV.UK's
+Nothing on the download side authenticates anywhere. If a source ever needs a
+token (Socrata offers app tokens to raise the anonymous rate limit), that will
+be a new environment variable documented here, not a silent addition. GOV.UK's
 content API, the DataPress portals and the Modern.Gov web service are all open,
 unauthenticated and unmetered as of 2026-09-19.
+
+### Cold start for the loader
+
+The loader needs a Postgres it can write to. On Modal that is the `infra/`
+project; anywhere else it is a connection string you already have.
+
+```sh
+cd ../infra && uv run pg start --dump-interval 3600
+export DATABASE_URL="$(cd ../infra && uv run pg url)"
+cd ../indexer
+uv run scrooge db init
+```
+
+`pg url` builds the string from the live tunnel address and the password in
+`infra/.env`. Nothing writes it to disk here, and the Modal tunnel gets a new
+host and port on every restart, so treat the export as good for one session
+and re-export it whenever a command says the connection dropped.
+
+`db init` applies `docs/payments-schema.sql` when there is no `payments` table
+yet, then upserts all 33 London authorities into `boroughs` with their ONS
+mid-2025 population. It is safe to run twice: the second run reports that
+`payments` exists, refreshes the 33 rows and re-grants `SELECT` to
+`scrooge_reader`.
+
+The agent's login role is created by hand, once, and its password never
+reaches the repo:
+
+```sh
+read -rs AGENT_PASSWORD           # nothing echoed, nothing in shell history
+cd ../infra && uv run pg psql -c \
+  "CREATE ROLE agent LOGIN PASSWORD '$AGENT_PASSWORD' IN ROLE scrooge_reader"
+uv run pg psql -c "ALTER ROLE agent SET statement_timeout = '10s'"
+unset AGENT_PASSWORD
+```
+
+`scrooge_reader` comes from the schema file and can only read `boroughs`,
+`source_files`, `payments` and `coverage`. The agent session gets
+`postgresql://agent:<password>@<host>:<port>/postgres` and can do nothing else
+with it.
 
 ## Kinds
 
@@ -37,17 +81,34 @@ downloaded whatever `--kind` says, because typing `mhclg` is already a choice
 of kind. The two trees are otherwise identical: same `<period>__<filename>`
 naming, same per-source `manifest.json`, same resume rules.
 
+`--kind` belongs to the download half. `load` reads `data/raw/` and has no
+`--kind`, because a budget book is a PDF and the loader reads payment tables.
+
 ## Environment
 
 | Variable | Default | What it does |
 | --- | --- | --- |
-| `SCROOGE_DATA_DIR` | the repo root `data/` | Where files and manifests are written. |
+| `SCROOGE_DATA_DIR` | the repo root `data/` | Where files and manifests are written, and where `load` reads them from. |
+| `DATABASE_URL` | none | Where `db init`, `load` and `load-status` write. No default: the Modal address changes on every restart. Must be the owner login; see the note on `.env.local` below. |
+| `SCROOGE_TEST_DATABASE_URL` | none | A Postgres the test suite may create and drop a database on. Unset means the database tests skip. |
 
 The data directory resolves in this order: `--data-dir PATH`, then
 `$SCROOGE_DATA_DIR`, then the repo root `data/` found by walking up from the
 package until a `.git` directory appears, then `./data` if there is no
 checkout. `.env` and `.env.local` in the repo root are loaded if present, and
 never override a variable already set in the shell or the cron line.
+
+No host, port or password for the database is stored anywhere in this repo.
+`DATABASE_URL` is read from the environment, and the one line the loader
+prints at startup replaces the password with `***` so a log or a screenshot
+cannot leak it.
+
+The `.env.local` rule applies to `DATABASE_URL` too, and that file is where
+the agent session keeps its read-only `agent` login. A `scrooge load` in a
+shell with no export picks that one up and stops at its first write with
+`the database refused: permission denied for table payments`. The startup
+line names the login it is using, so `postgresql://agent:***@...` there means
+the export is missing.
 
 ## Commands
 
@@ -120,6 +181,127 @@ selected, so a spend total and a budget total are two separate runs of this
 command. Earliest and latest are read through the period grammar rather than
 off the string, so a file covering September 2010 to March 2011 counts as
 reaching March 2011 and a quarter counts as reaching the last month in it.
+
+### scrooge db init
+
+```
+scrooge db init
+```
+
+Applies `docs/payments-schema.sql` when `payments` does not exist, then
+upserts the 33 `boroughs` rows and re-grants `SELECT` to `scrooge_reader`. The
+schema file is resolved relative to the git checkout the package was run from,
+so it is never duplicated and never drifts from the copy the agent session
+reads as its contract. Outside a checkout the command fails and says so rather
+than applying some other schema.
+
+Populations are the ONS mid-2025 estimates, fetched from NOMIS dataset
+`NM_2002_1` on 2026-09-19 and checked against table MYE2 of the ONS
+"Estimates of the population for England and Wales" release. The URLs, the
+table name and the year are in the header comment of
+`src/scrooge_indexer/loader/boroughs_data.py`. To move to a later year, change
+that file and run `db init` again; the upsert replaces name and population in
+place and touches nothing else.
+
+`CREATE ROLE scrooge_reader` in the schema file sits inside a `DO` block that
+swallows `duplicate_object`. Roles live in the cluster rather than in one
+database, so without that guard a second `db init` against a different
+database on the same server, or against a server restored from a dump that
+carried the role, would abort the file on its last two statements.
+
+### scrooge load
+
+```
+scrooge load [SLUG ...] [--all] [--since YYYY-MM] [--until YYYY-MM]
+             [--limit N] [--force] [--data-dir PATH]
+```
+
+| Flag | Default | Meaning |
+| --- | --- | --- |
+| `SLUG ...` | none | Boroughs to load. Only the 15 with a column mapping are accepted. |
+| `--all` | off | Every borough with a mapping and a directory under `data/raw/`. |
+| `--since YYYY-MM` | the earliest file held | Skip anything ending before this month. |
+| `--until YYYY-MM` | the latest file held | Skip anything starting after this month. |
+| `--limit N` | no limit | At most N files per borough, the most recent N. |
+| `--force` | off | Reload files already recorded as `loaded` or `skipped`. |
+| `--data-dir PATH` | see Environment | Where to read from. |
+
+The period comes from the borough's `manifest.json` where there is an entry
+for the file and from the `<period>__` filename prefix where there is not, so
+`--since` and `--until` use the same period grammar and the same overlap rule
+as `scrooge download`.
+
+One file is one transaction. It deletes that file's rows from `payments`,
+writes its `source_files` row, COPYs the new rows in, and only then records
+the outcome. A run killed mid-file leaves that file absent rather than half
+present, which is what makes rerunning the same command the whole of the
+recovery procedure.
+
+Every file ends as one of three things in `source_files`:
+
+| Status | Means | Retried on a plain rerun |
+| --- | --- | --- |
+| `loaded` | Its rows are in `payments`. `reason` carries the count of dropped rows if there were any. | no |
+| `skipped` | The file is not a payment list, or there is no reader for it. | no |
+| `failed` | Something went wrong that another run might survive. | yes |
+
+Retrying `failed` by default is a deliberate choice. A failure here is almost
+always a dropped connection or a parser that gave up partway, and the natural
+response to a failed run is to run it again. Making that need `--force` would
+also reload the thousand files that worked. A `skipped` file is a decision
+about what the file contains, and rerunning cannot change it, so skips need
+`--force` like loaded files do.
+
+A row that breaks a value rule is dropped, counted, and the file still loads.
+The count and the reasons go into `source_files.reason`, for example
+`12 rows dropped: 9 bad date, 3 empty supplier`. `source_row` counts every
+data row after the header, so a gap in the numbering is the record that
+something was thrown away. Fully blank rows, section markers such as Bexley's
+`APRIL`, and footer totals are not failures and are not counted as drops.
+
+Exit codes are the download's: 0 clean, 1 at least one file failed or the
+database was unreachable, 2 usage, 130 Ctrl-C.
+
+### scrooge load-status
+
+```
+scrooge load-status [--problems [N]]
+```
+
+Loaded, skipped and failed file counts per borough, row totals and the period
+range, read from `source_files` rather than from disk. `--problems` also lists
+up to N files that did not load with their reason, 50 by default.
+
+The verb is `load-status` rather than `load status` because `load` takes a
+list of borough slugs as positionals, and a subcommand sitting in that
+position would be ambiguous in argparse and worse in `--help`. Issue #8
+sketched it as `scrooge load status`; this is the same thing with a hyphen.
+
+### What does not load, and why
+
+Measured against every file on disk on 2026-09-19: 1,371 files, 1,348 loaded,
+23 skipped, 0 failed, 15,017,306 rows. The 23 skips are stable, so a run that
+reports these numbers is a clean run rather than one to investigate.
+
+| Files | Status | Reason |
+| --- | --- | --- |
+| 18 Lambeth months, 2010-12 to 2012-07 | `skipped` | `supplier totals, not payments`. One row per supplier with a month's total, which the schema doc says to skip. |
+| 2 Lambeth quarters, 2018-Q2 and 2018-Q3 | `skipped` | `no ODS reader`. Adding one means a new dependency for two files. |
+| Newham 2019-02 | `skipped` | An Excel 97 workbook published with a `.csv` extension. openpyxl reads xlsx, not xls. |
+| Bexley 2015-07 to 2015-09, Havering 2013-05 | `skipped` | No header row at all. The doc allows applying the borough's dominant header by position; this does not, because a mapping inferred from nothing is the one kind of error nobody would catch. |
+
+One file is read the other way round. Lambeth
+`2020-Q2__ec-over-500-report-q2-2020-21.csv` publishes its dates month first,
+which the loader settles by scanning that file's date column and records as
+`dates read month-first` in `source_files.reason`. The rule is in the Dates
+paragraph of `docs/payments-schema.md`: at least one slash date with a second
+number above 12 and none with a first number above 12. A file carrying both
+kinds fails with `date column has both orders`, and no file on disk does.
+
+The largest remaining drop is Bexley's October 2014 to March 2015 half year,
+which publishes a month rather than a day, `Oct-14` for every row. Those 9,928
+rows are dropped as `bad date`. There is no day to recover and inventing the
+first of the month would be worse than the gap.
 
 ## Where files land
 
@@ -258,6 +440,127 @@ download: done 7/7 · ok=7 bytes=5.5MB in 0:00:02
 The per-borough summary table goes to stdout at the end, so `scrooge download
 --all > summary.txt` keeps the table and leaves the progress on the terminal.
 
+Two things load as published and are wrong at the source. The loader has no
+rule for either, so queries over these months need to know.
+
+- Two files are byte-for-byte copies of another month and both load. Havering
+  `2011-12__december-2011.csv` is December 2010 again (5,209 rows, £45.3m),
+  and Newham `2018-06__paymentstosuppliersjuly2018.csv` is the July file
+  (10,303 rows, £65.2m). Havering December 2010 and Newham July 2018 are
+  double in `coverage`, and December 2011 and June 2018 are missing.
+- Some councils transposed day and month in part of a file before publishing
+  it. Hounslow `2021-01` carries ISO dates such as `2021-05-01` for 5 January,
+  1,115 of its 3,250 rows. Redbridge March 2016 has 699 rows written
+  `03/MM/2016` with a month after March. The per-file month-first rule cannot
+  see these, because the rest of each file is day first. 3,053 rows across
+  Hounslow, Lambeth and Redbridge are dated more than a month after their
+  file's period ends.
+
+A load prints the same shapes with its own counters:
+
+```
+scrooge load: 15 borough(s) (barnet, bexley, ...) · 1371 file(s) on disk · 0 already done · postgresql://postgres:***@host:5432/postgres
+load: 829/1,371 · loaded=806 skipped=23 rows=8,398,016 in 0:05:07
+```
+
+The bar counts files, not rows, because files are what resume works on. Rows
+is the live counter next to it, and it is the number worth watching: a bar
+that advances with the row count stuck means the loader is reading files it
+has decided to skip.
+
+A skipped or failed file prints one line naming the file and the reason, so a
+run under cron leaves an explanation in the log without anyone querying
+`source_files`.
+
+## Bulk loading into the Modal Postgres
+
+The whole corpus is about 2.9 GB of CSV and 16 million rows, and it all goes
+through the Modal tunnel. The server keeps PGDATA on the container's local
+disk and only the periodic `pg_dumpall` archives land on the Volume, so a
+restart in the middle of a load costs everything written since the last dump.
+
+Start the server with a long dump interval, load, then dump once by hand:
+
+```sh
+cd ../infra
+uv run pg start --dump-interval 3600
+export DATABASE_URL="$(uv run pg url)"
+cd ../indexer
+uv run scrooge db init
+uv run scrooge load --all
+cd ../infra && uv run pg dump
+```
+
+The default interval is 600 seconds, and a `pg_dumpall` of a 17 GB database
+blocks the server's own loop while it runs. Six dumps an hour of a database
+that is still being written to is wasted work: raise the interval for the
+load, take one dump at the end, and put the interval back for normal running.
+
+What a restart costs during a load. A replacement container restores the last
+archive and gets a new tunnel address, so the loader's connection drops and it
+stops with the message that says to re-export `DATABASE_URL`. Files committed
+after that last dump are gone from `payments` and from `source_files`
+together, because they were written in the same transaction, so the rerun
+reloads exactly those files and nothing else. With `--dump-interval 3600` the
+worst case is an hour of loading to redo, which at the speed measured on a
+local Postgres 17 is roughly 90 million rows of headroom and in practice the
+whole corpus.
+
+Two things end a container: a deliberate `pg stop`, and the 24 hour function
+timeout. `infra/docs/runbook.md` has the detail. If the load will run near a
+container's 24 hour mark, start a fresh one first.
+
+### The faster route: load locally, restore on Modal
+
+Loading through the tunnel is the slow way to fill an empty server. The
+server's own archive format is a gzipped `pg_dumpall --clean --if-exists` on
+the Volume `scrooge-postgres-data`, and it restores the newest one at boot. So
+load into a local Postgres 17, dump it in that format, and hand the archive
+to the Volume. This is how the first full load was done on 2026-09-19.
+
+```sh
+docker run -d --name scrooge-loader-test --restart unless-stopped \
+  -e POSTGRES_PASSWORD="$PGPASS" -p 127.0.0.1:55432:5432 postgres:17
+export DATABASE_URL="postgresql://postgres:$PGPASS@127.0.0.1:55432/postgres"
+uv run scrooge db init && uv run scrooge load --all
+
+STAMP=$(date -u +%Y%m%dT%H%M%SZ)
+docker exec scrooge-loader-test pg_dumpall -U postgres --clean --if-exists \
+  | pigz > /tmp/scrooge-postgres-$STAMP.sql.gz
+
+cd ../infra
+uv run pg stop                                # only if a server is up
+uv run modal volume put scrooge-postgres-data \
+  /tmp/scrooge-postgres-$STAMP.sql.gz /scrooge-postgres-$STAMP.sql.gz
+uv run pg restore --list                      # the new archive must be newest
+uv run pg start --dump-interval 21600 --timeout 5400
+```
+
+Measured on 2026-09-19 for 15,017,306 rows: local load 9 minutes, dump 25
+seconds, archive 491 MB, upload under 2 minutes, boot with restore 11 minutes
+on the 2 CPU container. The database is 19 GB locally and 14 GB after the
+restore, because a restore writes no dead rows.
+
+The name matters. The server picks the newest archive by the timestamp in the
+file name, so the stamp has to be later than every archive already on the
+Volume. The archive carries the local `postgres` password, which the server
+overwrites with the Modal secret after the restore and before the tunnel
+opens. It also carries every login role in the local cluster, so dump before
+creating any local-only login, or that login and its weak password go to a
+server on the public internet.
+
+Those 11 minutes are paid again on every container start, including the daily
+replacement after the 24 hour function timeout, and `pg start` has to be given
+a `--timeout` that covers them. The default of 900 seconds leaves little room.
+
+Check the copy before trusting it. Run the same per-borough query on both
+sides and compare:
+
+```sql
+SELECT borough, count(*), sum(amount_gbp), min(payment_date), max(payment_date)
+FROM payments GROUP BY 1 ORDER BY 1;
+```
+
 ## Resume and recovery
 
 Re-running the same command is the recovery procedure. A file is skipped when
@@ -279,6 +582,55 @@ never renamed into place, so the next run refetches it.
 
 If a manifest is corrupted, it is read as empty rather than crashing the run,
 and the next download rebuilds it. That costs one refetch of that borough.
+
+### Resume and recovery for a load
+
+Rerunning the same command is again the whole procedure. Files recorded as
+`loaded` or `skipped` are passed over without opening them, files recorded as
+`failed` are retried, and files with no row at all are loaded.
+
+Ctrl-C exits 130 and prints the resume command. The file in flight is rolled
+back, so `payments` never holds part of a file and `source_files` never claims
+a file that is not there. There is no lock file and nothing to clean up.
+
+If the connection drops mid-run, the loader stops with one message:
+
+```
+The database connection dropped. The Modal tunnel gets a new address on every
+restart, so re-export the URL and run the same command again; files already
+loaded are skipped.
+  export DATABASE_URL="$(cd ../infra && uv run pg url)"
+```
+
+That is the whole recovery. It stops rather than retrying because a new tunnel
+address is the usual cause and no amount of reconnecting to the old one will
+find it.
+
+Other things that go wrong, and what to do:
+
+- **`the database refused: permission denied`.** `DATABASE_URL` is a login
+  that cannot write, nearly always the `agent` one from `.env.local`. Export
+  the owner URL from `pg url` and rerun. Nothing was written.
+- **The loader was killed, or the machine went down.** Every file commits on
+  its own, so everything the progress line had counted as loaded is in the
+  database and the file in flight is absent. Rerun the same command.
+- **A borough loads zero rows.** `scrooge load-status --problems` names the
+  files and the reason. `unmapped header` means the council changed its column
+  names, which is a change to the table in `docs/payments-schema.md` and then
+  to `LAYOUTS` in `loader/mappings.py`.
+- **A file reports a large number of dropped rows.** The reason field says
+  which rule they broke. A whole file dropping on `bad date` usually means the
+  borough published a month rather than a day, as Bexley did for October 2014
+  to March 2015. Dropping the rows is right; inventing a day for them is not.
+- **`db init` says the schema file is missing.** The package was installed
+  outside a checkout. `docs/payments-schema.sql` is resolved from the git root
+  above the package, and there is deliberately no second copy to fall back to.
+- **The row counts look right but the agent sees nothing.** Re-run
+  `scrooge db init`. It re-grants `SELECT` to `scrooge_reader`, which a restore
+  from an archive taken before the role existed can leave behind.
+- **A file needs reloading after a fix.** `scrooge load <borough> --since
+  <month> --until <month> --force`. `--force` is the only thing that reloads a
+  file recorded as `loaded` or `skipped`.
 
 `--force` refetches everything discovered, even files recorded as complete, and
 replaces them in place. Use it after a council silently republishes a

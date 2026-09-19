@@ -20,7 +20,9 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
+import psycopg
 from rich.console import Console
+from rich.markup import escape
 from rich.table import Table
 
 from . import __version__, manifest
@@ -28,6 +30,9 @@ from .boroughs import get_source, import_errors, iter_sources
 from .boroughs.base import Source, filter_files
 from .config import DEFAULT_DELAY, ENV_DATA_DIR, resolve_data_dir
 from .http import FetchError, make_client
+from .loader import db, runner
+from .loader import files as spend_files
+from .loader.mappings import SPEND_BOROUGHS
 from .models import RemoteFile
 from .progress import format_bytes, make_progress, stderr_console
 
@@ -38,6 +43,11 @@ EXIT_INTERRUPTED = 130
 
 KINDS = ("spend", "budget", "all")
 DEFAULT_KIND = "spend"
+
+#: Live counters on the load bar. Rows rather than bytes: the interesting
+#: question during a 16 million row load is how many rows have landed, and a
+#: byte count of what was read says nothing about that.
+LOAD_COUNTERS = ("loaded", "skipped", "failed", "rows")
 
 
 def _of_kind(kind: str) -> list[Source]:
@@ -422,6 +432,279 @@ def _warn_import_errors(err: Console) -> None:
 
 
 # --------------------------------------------------------------------------- #
+# scrooge db init
+# --------------------------------------------------------------------------- #
+
+
+def cmd_db_init(args: argparse.Namespace, out: Console, err: Console) -> int:
+    """Apply the schema once, then fill `boroughs`. Safe to run twice."""
+    with db.connect() as conn:
+        if db.schema_present(conn):
+            err.print("payments already exists, leaving the schema alone")
+        else:
+            path = db.apply_schema(conn)
+            err.print(f"applied {path}")
+        count = db.upsert_boroughs(conn)
+        db.grant_reader(conn)
+        table = Table(title="boroughs", title_justify="left")
+        table.add_column("slug")
+        table.add_column("name")
+        table.add_column("population", justify="right")
+        for slug, name, population in db.iter_boroughs(conn):
+            table.add_row(slug, name, f"{population:,}" if population else "-")
+        out.print(table)
+        err.print(f"{count} borough(s) upserted")
+    return EXIT_OK
+
+
+# --------------------------------------------------------------------------- #
+# scrooge load
+# --------------------------------------------------------------------------- #
+
+
+@dataclass
+class LoadOutcome:
+    """Running totals for one borough during a load."""
+
+    slug: str
+    files: int = 0
+    loaded: int = 0
+    skipped: int = 0
+    failed: int = 0
+    already: int = 0
+    rows: int = 0
+    dropped: int = 0
+
+
+def _load_slugs(
+    args: argparse.Namespace, data_dir: Path, err: Console
+) -> list[str] | None:
+    if args.all:
+        return spend_files.known_boroughs(data_dir)
+    chosen = []
+    for slug in args.slugs:
+        if slug not in SPEND_BOROUGHS:
+            known = ", ".join(SPEND_BOROUGHS)
+            err.print(f"[red]no column mapping for {slug!r}[/]. Known: {known}")
+            return None
+        chosen.append(slug)
+    return chosen
+
+
+def cmd_load(args: argparse.Namespace, out: Console, err: Console) -> int:
+    data_dir = resolve_data_dir(args.data_dir)
+    slugs = _load_slugs(args, data_dir, err)
+    if slugs is None:
+        return EXIT_USAGE
+    if not slugs:
+        err.print(
+            f"no spend files on disk under {data_dir}. Run scrooge download first."
+        )
+        return EXIT_USAGE
+
+    plan = spend_files.select(
+        data_dir, slugs, since=args.since, until=args.until, limit=args.limit
+    )
+    outcomes = {slug: LoadOutcome(slug) for slug in slugs}
+    for spend_file in plan:
+        outcomes[spend_file.borough].files += 1
+
+    url = db.database_url()
+    with db.connect(url) as conn:
+        if not db.schema_present(conn):
+            err.print("[red]no payments table.[/] Run scrooge db init first.")
+            return EXIT_FAILURES
+        states = db.file_states(conn)
+        already = sum(
+            1
+            for spend_file in plan
+            if runner.should_skip(states.get(spend_file.relpath), force=args.force)
+        )
+        # markup=False keeps a bracketed slug list out of Rich's hands, and
+        # soft_wrap keeps the summary on one line however narrow the terminal.
+        err.print(
+            f"scrooge load: {len(slugs)} borough(s) ({', '.join(slugs)}) · "
+            f"{len(plan)} file(s) on disk · {already} already done · "
+            f"{db.redact(url)}",
+            highlight=False,
+            markup=False,
+            soft_wrap=True,
+        )
+        if not plan:
+            _load_summary(out, outcomes)
+            return EXIT_OK
+
+        interrupted = False
+        counters = {"loaded": 0, "skipped": 0, "failed": 0, "rows": 0}
+        with make_progress(err, counters=LOAD_COUNTERS) as progress:
+            task = progress.add_task("load", total=len(plan), **counters)
+            try:
+                for spend_file in plan:
+                    outcome = outcomes[spend_file.borough]
+                    state = states.get(spend_file.relpath)
+                    if runner.should_skip(state, force=args.force):
+                        outcome.already += 1
+                        counters["skipped"] += 1
+                        progress.update(task, advance=1, **counters)
+                        continue
+                    result = runner.load_file(conn, spend_file)
+                    _tally(outcome, counters, result, err)
+                    progress.update(task, advance=1, **counters)
+            except KeyboardInterrupt:
+                interrupted = True
+
+    _load_summary(out, outcomes)
+    if interrupted:
+        err.print(
+            "\n[yellow]interrupted.[/] The file in flight was rolled back, so "
+            "nothing is half loaded. Resume with:\n  " + _load_resume_command(args),
+            highlight=False,
+        )
+        return EXIT_INTERRUPTED
+    return EXIT_FAILURES if any(o.failed for o in outcomes.values()) else EXIT_OK
+
+
+def _tally(
+    outcome: LoadOutcome,
+    counters: dict[str, int],
+    result: runner.LoadResult,
+    err: Console,
+) -> None:
+    if result.status == "loaded":
+        outcome.loaded += 1
+        outcome.rows += result.rows_loaded
+        outcome.dropped += result.rows_dropped
+        counters["loaded"] += 1
+        counters["rows"] += result.rows_loaded
+        return
+    if result.status == "skipped":
+        outcome.skipped += 1
+        counters["skipped"] += 1
+        err.print(
+            f"[yellow]skipped[/] {escape(f'{result.path}: {result.reason}')}",
+            highlight=False,
+            soft_wrap=True,
+        )
+        return
+    outcome.failed += 1
+    counters["failed"] += 1
+    err.print(
+        f"[red]failed[/] {escape(f'{result.path}: {result.reason}')}",
+        highlight=False,
+        soft_wrap=True,
+    )
+
+
+def _load_summary(out: Console, outcomes: dict[str, LoadOutcome]) -> None:
+    table = Table(title="Load summary", title_justify="left")
+    table.add_column("borough")
+    for column in (
+        "files",
+        "loaded",
+        "skipped",
+        "failed",
+        "already",
+        "rows",
+        "dropped",
+    ):
+        table.add_column(column, justify="right")
+    totals = LoadOutcome("total")
+    for outcome in outcomes.values():
+        table.add_row(
+            outcome.slug,
+            str(outcome.files),
+            str(outcome.loaded),
+            str(outcome.skipped),
+            str(outcome.failed),
+            str(outcome.already),
+            f"{outcome.rows:,}",
+            str(outcome.dropped),
+        )
+        for name in (
+            "files",
+            "loaded",
+            "skipped",
+            "failed",
+            "already",
+            "rows",
+            "dropped",
+        ):
+            setattr(totals, name, getattr(totals, name) + getattr(outcome, name))
+    table.add_section()
+    table.add_row(
+        "total",
+        str(totals.files),
+        str(totals.loaded),
+        str(totals.skipped),
+        str(totals.failed),
+        str(totals.already),
+        f"{totals.rows:,}",
+        str(totals.dropped),
+    )
+    out.print(table)
+
+
+def _load_resume_command(args: argparse.Namespace) -> str:
+    """The exact command that picks up where an interrupted load stopped.
+
+    ``--force`` is dropped for the same reason the download hint drops it: the
+    files it already reloaded are recorded as loaded, and repeating it would
+    do all of them again.
+    """
+    parts = ["scrooge load"]
+    parts.append("--all" if args.all else " ".join(args.slugs))
+    for flag, value in (
+        ("--since", args.since),
+        ("--until", args.until),
+        ("--data-dir", args.data_dir),
+    ):
+        if value:
+            parts.append(f"{flag} {value}")
+    if args.limit:
+        parts.append(f"--limit {args.limit}")
+    return " ".join(parts)
+
+
+# --------------------------------------------------------------------------- #
+# scrooge load-status
+# --------------------------------------------------------------------------- #
+
+
+def cmd_load_status(args: argparse.Namespace, out: Console, err: Console) -> int:
+    with db.connect() as conn:
+        if not db.schema_present(conn):
+            err.print("[red]no payments table.[/] Run scrooge db init first.")
+            return EXIT_FAILURES
+        table = Table(title="In the database", title_justify="left")
+        table.add_column("borough")
+        for column in ("loaded", "skipped", "failed", "rows"):
+            table.add_column(column, justify="right")
+        table.add_column("earliest")
+        table.add_column("latest")
+        for slug, loaded, skipped, failed, rows, earliest, latest in db.status_rows(
+            conn
+        ):
+            table.add_row(
+                slug,
+                str(loaded),
+                str(skipped),
+                str(failed),
+                f"{rows:,}",
+                earliest or "-",
+                latest or "-",
+            )
+        out.print(table)
+        if args.problems:
+            problems = Table(title="Not loaded", title_justify="left")
+            for column in ("path", "status", "reason"):
+                problems.add_column(column)
+            for path, status, reason in db.failed_files(conn, limit=args.problems):
+                problems.add_row(path, status, reason or "-")
+            out.print(problems)
+    return EXIT_OK
+
+
+# --------------------------------------------------------------------------- #
 # argparse
 # --------------------------------------------------------------------------- #
 
@@ -494,6 +777,60 @@ def build_parser() -> argparse.ArgumentParser:
     p_status = sub.add_parser("status", help="per-source counts from the manifests")
     p_status.add_argument("--data-dir", help=f"data directory (${ENV_DATA_DIR})")
     _add_kind(p_status)
+
+    p_db = sub.add_parser("db", help="set the database up")
+    db_sub = p_db.add_subparsers(dest="db_command", required=True, metavar="COMMAND")
+    db_sub.add_parser(
+        "init",
+        help="apply the schema and fill boroughs",
+        description=(
+            "Apply docs/payments-schema.sql when there is no payments table "
+            "yet, then upsert all 33 London authorities with their ONS "
+            "mid-year population. Safe to run twice."
+        ),
+    )
+
+    p_load = sub.add_parser(
+        "load",
+        help="read the spend files on disk into Postgres",
+        description=(
+            "Read data/raw/<borough>/ into payments, one transaction per "
+            "file. Safe to re-run: files already loaded are skipped, and a "
+            "file that fails is retried on the next run."
+        ),
+    )
+    p_load.add_argument("slugs", nargs="*", metavar="SLUG", help="boroughs to load")
+    p_load.add_argument(
+        "--all", action="store_true", help="every borough with files on disk"
+    )
+    p_load.add_argument("--since", metavar="YYYY-MM", help="earliest period")
+    p_load.add_argument("--until", metavar="YYYY-MM", help="latest period")
+    p_load.add_argument(
+        "--limit",
+        type=int,
+        metavar="N",
+        help="at most N files per borough, most recent first",
+    )
+    p_load.add_argument(
+        "--force",
+        action="store_true",
+        help="reload files already recorded as loaded or skipped",
+    )
+    p_load.add_argument("--data-dir", help=f"data directory (${ENV_DATA_DIR})")
+
+    p_load_status = sub.add_parser(
+        "load-status",
+        help="loaded, skipped and failed files per borough, from the database",
+    )
+    p_load_status.add_argument(
+        "--problems",
+        type=int,
+        nargs="?",
+        const=50,
+        default=0,
+        metavar="N",
+        help="also list up to N files that did not load (default 50)",
+    )
     return parser
 
 
@@ -537,8 +874,66 @@ def main(argv: list[str] | None = None) -> int:
         except KeyboardInterrupt:
             err.print("\ninterrupted before any file was fetched.")
             return EXIT_INTERRUPTED
+    if args.command in ("db", "load", "load-status"):
+        return _run_database_command(args, parser, out, err)
     parser.error(f"unknown command {args.command}")
     return EXIT_USAGE
+
+
+def _run_database_command(
+    args: argparse.Namespace,
+    parser: argparse.ArgumentParser,
+    out: Console,
+    err: Console,
+) -> int:
+    """The three verbs that need a connection, with one place to report losing it.
+
+    Every one of them ends the same way when the Modal tunnel moves, so the
+    message that says how to get a fresh URL is written once here rather than
+    at each call site.
+    """
+    if args.command == "load":
+        if not args.slugs and not args.all:
+            err.print(
+                "nothing to load. Name one or more boroughs, or pass --all:\n"
+                "  scrooge load camden --since 2019-09 --until 2019-09\n"
+                "  scrooge load --all\n"
+                f"  known boroughs: {', '.join(SPEND_BOROUGHS)}",
+                highlight=False,
+            )
+            return EXIT_USAGE
+        if not _validate_period(args.since, "--since", err) or not _validate_period(
+            args.until, "--until", err
+        ):
+            return EXIT_USAGE
+    try:
+        if args.command == "db":
+            if args.db_command == "init":
+                return cmd_db_init(args, out, err)
+            parser.error(f"unknown db command {args.db_command}")
+            return EXIT_USAGE
+        if args.command == "load":
+            return cmd_load(args, out, err)
+        return cmd_load_status(args, out, err)
+    except db.DatabaseUnavailable as exc:
+        err.print(f"[red]{exc}[/]", highlight=False)
+        return EXIT_FAILURES
+    except psycopg.OperationalError as exc:
+        # Lost between files rather than inside a COPY, so db.py never saw it.
+        err.print(f"{exc}\n\n{db.RECONNECT_HINT}", highlight=False, markup=False)
+        return EXIT_FAILURES
+    except psycopg.Error as exc:
+        err.print(
+            f"the database refused: {exc}\n"
+            f"Files already loaded stay loaded. Check that ${db.ENV_DATABASE_URL} "
+            "is the owner login from `pg url` and not the read-only agent one.",
+            highlight=False,
+            markup=False,
+        )
+        return EXIT_FAILURES
+    except KeyboardInterrupt:
+        err.print("\ninterrupted before any file was written.")
+        return EXIT_INTERRUPTED
 
 
 if __name__ == "__main__":  # pragma: no cover
