@@ -22,7 +22,6 @@ import {
   PromptInputTools,
 } from "@/components/ai-elements/prompt-input";
 import { Reasoning, ReasoningContent, ReasoningTrigger } from "@/components/ai-elements/reasoning";
-import { Shimmer } from "@/components/ai-elements/shimmer";
 import { Suggestion } from "@/components/ai-elements/suggestion";
 import {
   Tool,
@@ -33,16 +32,17 @@ import {
   type ToolPart,
 } from "@/components/ai-elements/tool";
 import { ToolResult } from "@/components/chat/results";
+import { WorkingLine } from "@/components/chat/working";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { CHAT_API_PATH } from "@/lib/chat-backend";
 import { useShowToolCalls } from "@/lib/settings";
 
 const SUGGESTIONS = [
-  "Which boroughs and months are loaded?",
-  "Camden's top suppliers in 2023",
-  "Compare Camden, Lambeth and Barnet in 2023",
-  "The biggest payments in Lambeth in 2023",
+  "Who got the most money from Camden in 2024?",
+  "How much did London boroughs pay Capita in 2022?",
+  "Which spent more per resident in 2025: Camden, Lambeth or Barnet?",
+  "How has Barnet's spending changed year by year since 2015?",
 ];
 
 /** One tool call: name, status badge, the input it was given and what it returned. */
@@ -171,7 +171,7 @@ export function Chat() {
           {status === "submitted" ? (
             <Message from="assistant">
               <MessageContent>
-                <Shimmer>Working on it</Shimmer>
+                <WorkingLine />
               </MessageContent>
             </Message>
           ) : null}

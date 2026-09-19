@@ -21,7 +21,7 @@ The chat posts to the Pydantic AI agent in `agent/` by default, proxied by the `
 
 ## Result components
 
-Each of the agent's tools is drawn by a component of its own, in `src/components/chat/results/`. `ToolResult` picks one by tool name and is the only thing the conversation renders for a tool call: the component when the result is in, a one-line shimmer while the call runs, a short line when it fails.
+Each of the agent's tools is drawn by a component of its own, in `src/components/chat/results/`. `ToolResult` picks one by tool name and is the only thing the conversation renders for a tool call: the component when the result is in, a working line while the call runs, a short line when it fails.
 
 | Tool                                  | Component                                                                               |
 | ------------------------------------- | --------------------------------------------------------------------------------------- |
@@ -36,7 +36,15 @@ The adapter puts a tool call on the wire as a part typed `tool-<name>` and never
 
 Tool output is validated before it is drawn. `src/lib/agent-results.ts` holds one zod schema per result type, mirroring the Pydantic models in `agent/tools.py` field for field. A result that does not parse shows one muted line rather than taking the conversation down. Money, dates and borough slugs are formatted in `src/lib/format.ts`, and charts are the shadcn `chart` wrapper over Recharts, coloured from the `--chart-*` variables in `globals.css`.
 
-To add a component for a new tool: mirror its Pydantic model as a schema in `agent-results.ts` and register it in `RESULT_SCHEMAS` under the tool's name, write the component beside the others, add a case to the switch in `results/index.tsx`, and give the tool a line in `RUNNING` so the shimmer says what the call is doing. A tool with no component renders nothing.
+To add a component for a new tool: mirror its Pydantic model as a schema in `agent-results.ts` and register it in `RESULT_SCHEMAS` under the tool's name, write the component beside the others, add a case to the switch in `results/index.tsx`, and give the tool a line in `RUNNING` so the working line says what the call is doing. A tool with no component renders nothing.
+
+## The working line
+
+`src/components/chat/working.tsx` is what shows while the agent works: a pulsing pound sign, a shimmering phrase and the seconds so far. Before any tool runs it rotates every 3.5 seconds through dry remarks about bureaucracy ("Forming a working group", "Awaiting sign-off from Finance"). During a tool call it shows that tool's line from `RUNNING`, which keeps the real borough and search term because they are the only live sign of what the agent is doing.
+
+The remarks mock process and never a borough, a supplier or a person. The app states facts about named bodies, so a loading line must not read as a verdict on one. Hold new phrases to that. The agent's answers follow the same rule, set in the voice section of `agent/agent.py`.
+
+A screen reader hears each step once: the visible text is `aria-hidden` and a fixed label sits beside it, so neither the rotation nor the ticking seconds is announced. With reduced motion on, the rotation, the pulse and the shimmer all stop.
 
 ## Settings
 

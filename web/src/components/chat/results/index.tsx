@@ -16,7 +16,6 @@ import { getToolName } from "ai";
 import { CircleAlertIcon } from "lucide-react";
 import { useMemo } from "react";
 
-import { Shimmer } from "@/components/ai-elements/shimmer";
 import type { ToolPart } from "@/components/ai-elements/tool";
 import {
   type AgentToolName,
@@ -33,6 +32,7 @@ import {
 } from "@/lib/agent-results";
 import * as fmt from "@/lib/format";
 
+import { WorkingLine } from "../working";
 import { BoroughComparisonResult } from "./borough-comparison";
 import { CoverageResult } from "./coverage";
 import { PaymentsResult } from "./payments";
@@ -50,24 +50,33 @@ function scope(borough?: string | null): string {
   return borough ? ` in ${fmt.borough(borough)}` : " across every borough";
 }
 
-/** What the shimmer says while a call is in flight, in the words of the question. */
+/**
+ * What the working line says while a call is in flight: the real arguments, in
+ * the dry voice of `../working`. The borough and the search term stay in,
+ * because they are the only live sign of what the agent is doing. The wit is
+ * aimed at the paperwork and never at the borough or supplier being named.
+ */
 const RUNNING: Record<AgentToolName, (input: ToolInput) => string> = {
   coverage: (input) =>
     input.borough
-      ? `Checking which months ${fmt.borough(input.borough)} covers`
-      : "Checking which boroughs and months are loaded",
-  spend_total: (input) => `Adding up ${possessive(input.borough)}total spend`,
+      ? `Checking which months of ${possessive(input.borough)}paperwork made it in`
+      : "Taking stock of which boroughs and months are on file",
+  spend_total: (input) => `Totting up ${possessive(input.borough)}total spend`,
   spend_by: (input) =>
-    `Adding up ${possessive(input.borough)}spend by ${(input.group_by ?? "").replace("_", " ") || "category"}`,
+    `Sorting ${possessive(input.borough)}spend into neat little pots, by ${(input.group_by ?? "").replace("_", " ") || "category"}`,
   supplier_payments: (input) =>
     input.supplier_like
-      ? `Looking up payments to "${input.supplier_like}"`
-      : "Looking up payments to a supplier",
-  largest_payments: (input) => `Finding the biggest payments${scope(input.borough)}`,
+      ? `Going through the invoices for "${input.supplier_like}"`
+      : "Going through the invoices for a supplier",
+  largest_payments: (input) => `Finding the biggest payments${scope(input.borough)}. Do sit down`,
   search_payments: (input) =>
-    input.text ? `Searching for "${input.text}"${scope(input.borough)}` : "Searching the payments",
+    input.text
+      ? `Rummaging through the payments for "${input.text}"${scope(input.borough)}`
+      : "Rummaging through the payments",
   compare_boroughs: (input) =>
-    input.boroughs?.length ? `Comparing ${fmt.boroughs(input.boroughs)}` : "Comparing boroughs",
+    input.boroughs?.length
+      ? `Lining up ${fmt.boroughs(input.boroughs)} for an awkward comparison`
+      : "Lining up the boroughs for an awkward comparison",
 };
 
 /** A validated result, or the news that the output no longer fits its schema. */
@@ -145,7 +154,7 @@ function AgentResult({ name, part }: { name: AgentToolName; part: ToolPart }) {
   const args: ToolInput = input.success ? input.data : {};
 
   if (part.state === "input-streaming" || part.state === "input-available") {
-    return <Shimmer className="text-sm">{RUNNING[name](args)}</Shimmer>;
+    return <WorkingLine text={RUNNING[name](args)} />;
   }
 
   if (part.state === "output-error") {

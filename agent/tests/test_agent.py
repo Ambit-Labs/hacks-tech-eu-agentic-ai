@@ -13,7 +13,14 @@ from pydantic_ai.messages import (
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 from pydantic_ai.models.test import TestModel
 
-from agent import COVERAGE_TTL_SECONDS, REQUEST_LIMIT, USAGE_LIMITS, build_agent, build_model
+from agent import (
+    COVERAGE_TTL_SECONDS,
+    INSTRUCTIONS,
+    REQUEST_LIMIT,
+    USAGE_LIMITS,
+    build_agent,
+    build_model,
+)
 from config import Settings
 from db import Database
 from tools import Deps
@@ -53,6 +60,23 @@ def test_build_model_gateway_needs_key(monkeypatch):
                 environment="dev",
             )
         )
+
+
+def test_the_voice_never_outranks_the_facts():
+    """The dry voice is decoration. A model follows whichever instruction is
+    more vivid, so the accuracy rules come first, the voice section says so,
+    and its limits are spelled out: one aside, aimed at process, never at a
+    named body, and absent when a joke would land on people."""
+    accuracy = INSTRUCTIONS.index("Answer only from the tools.")
+    voice = INSTRUCTIONS.index("Voice.")
+    assert accuracy < voice
+    section = " ".join(INSTRUCTIONS[voice:].split())
+    assert "Everything above outranks this section" in section
+    assert "never more than one per answer" in section
+    assert "Never aim it at a named borough, supplier or person" in section
+    assert "never suggest waste, incompetence or wrongdoing" in section
+    assert "A caveat about coverage is a plain statement" in section
+    assert "social care, children, homelessness" in section
 
 
 async def test_instructions_carry_coverage(deps):

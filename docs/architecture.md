@@ -297,6 +297,17 @@ never estimate. Every answer states the borough, the period and the payment
 count behind a figure, and names the department or purpose values a filter
 matched. Prose stays short, because the UI draws the table and the chart.
 
+The last section of the static text is the voice. After the facts the model
+may add one dry aside per answer, a weary civil servant's remark about
+paperwork, committees or procurement. The section says the accuracy rules
+outrank it, and it sits after them because a fast model follows whichever
+instruction is more vivid. The aside never targets a named borough, supplier
+or person, never hints at waste or wrongdoing, and never rides on a coverage
+caveat. It is dropped when the data does not cover the question, when a tool
+failed, when the question is out of scope, and when the subject is social
+care, children or homelessness. `test_the_voice_never_outranks_the_facts`
+pins the order and the limits.
+
 A second, dynamic instruction appends a summary of what is loaded, read from
 the `coverage` view and cached for 300 seconds. That is how the model knows
 which boroughs and months it can answer for without spending a tool call to
