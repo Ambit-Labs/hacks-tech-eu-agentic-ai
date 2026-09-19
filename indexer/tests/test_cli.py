@@ -60,10 +60,14 @@ def test_download_without_a_borough_is_a_usage_error(capsys):
     assert "scrooge list" in capsys.readouterr().err
 
 
-def test_an_unknown_borough_is_a_usage_error(capsys, tmp_path):
+def test_an_unknown_slug_is_a_usage_error(capsys, tmp_path):
     code = cli.main(["download", "atlantis", "--data-dir", str(tmp_path)])
     assert code == cli.EXIT_USAGE
-    assert "unknown borough" in capsys.readouterr().err
+    err = capsys.readouterr().err
+    assert "unknown source" in err
+    # The hint lists every slug, not just the ones --kind would have selected:
+    # somebody who mistyped a budget slug needs to see budget slugs.
+    assert "mhclg" in err
 
 
 def test_a_malformed_since_is_a_usage_error(capsys, tmp_path):

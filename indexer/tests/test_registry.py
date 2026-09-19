@@ -67,14 +67,31 @@ def test_each_source_declares_the_full_interface():
         assert source.name
         assert source.threshold
         assert source.access
+        assert source.kind in ("spend", "budget")
         assert source.landing_page.startswith("https://")
         assert callable(source.discover)
 
 
-def test_the_shared_umbraco_base_is_not_itself_a_borough():
-    """Richmond and Wandsworth share a class. It must not register as a fourth."""
-    assert "_umbraco" not in boroughs.all_slugs()
-    assert "base" not in boroughs.all_slugs()
+def test_budget_sources_register_beside_the_spend_ones():
+    """One registry, one scan, two kinds. Nothing is listed anywhere else."""
+    registry = boroughs.registry()
+    assert {"mhclg", "richmond-budget", "lambeth-budget"} <= set(registry)
+    assert registry["mhclg"].kind == "budget"
+    assert registry["richmond"].kind == "spend"
+
+
+def test_a_budget_slug_does_not_collide_with_its_borough():
+    """Richmond publishes both, so the two must be separate sources."""
+    registry = boroughs.registry()
+    assert registry["richmond"].kind == "spend"
+    assert registry["richmond-budget"].kind == "budget"
+
+
+def test_the_shared_bases_are_not_themselves_sources():
+    """Underscore modules hold machinery several sources share, not sources."""
+    slugs = boroughs.all_slugs()
+    for name in ("_umbraco", "_govuk", "_moderngov", "_budgetbook", "base"):
+        assert name not in slugs
 
 
 def test_adding_one_file_adds_a_borough(drop_module):

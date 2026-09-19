@@ -1,14 +1,20 @@
 # scrooge-indexer
 
-Downloads the spending files London boroughs publish under the transparency
-code (every payment over £500, and over £250 in some boroughs) and saves them
-byte for byte on disk. No parsing, no column renaming, no re-encoding. The BOM
-Richmond puts on its CSVs is still there after the download, because a later
-stage that has to reconcile 33 different schemas needs the original bytes to
-argue with.
+Downloads what London boroughs publish about their money and saves it byte for
+byte on disk. Two kinds of thing:
 
-One borough is one file in `src/scrooge_indexer/boroughs/`. Adding the 34th
-borough means writing that file and nothing else.
+- **spend**: the transaction-level files published under the transparency code,
+  every payment over £500 and over £250 in some boroughs.
+- **budget**: planned spend, from each council's own budget book and from the
+  MHCLG returns that carry all 33 boroughs in one national file.
+
+No parsing, no column renaming, no re-encoding. The BOM Richmond puts on its
+CSVs is still there after the download, because a later stage that has to
+reconcile 33 different schemas needs the original bytes to argue with.
+
+One source is one file in `src/scrooge_indexer/boroughs/`. Adding the 34th
+borough, or the next budget publisher, means writing that file and nothing
+else.
 
 ## Install
 
@@ -22,18 +28,34 @@ Python 3.12 or newer. Everything else comes from `uv.lock`.
 ## Commands
 
 ```sh
-uv run scrooge list                     # registered boroughs, and what is on disk
-uv run scrooge download camden          # one borough, full history
+uv run scrooge list                     # registered sources, and what is on disk
+uv run scrooge download camden          # one source, full history
 uv run scrooge download --all --since 2026-01
 uv run scrooge status                   # counts, byte totals, failures
+
+uv run scrooge list --kind all          # spend and budget together
+uv run scrooge download --all --kind budget
+uv run scrooge download mhclg           # a slug works whatever --kind says
 ```
 
-`scrooge download` discovers what a borough publishes, then fetches whatever is
+`scrooge download` discovers what a source publishes, then fetches whatever is
 not already on disk. Re-running is safe and cheap: a file recorded as complete
 in the manifest and still present on disk is skipped without a request.
 
-Flags, defaults, recovery and the cron line are in
+Flags, defaults, recovery and the cron lines are in
 [docs/runbook.md](docs/runbook.md).
+
+## Kinds
+
+`list`, `download` and `status` all take `--kind spend` (the default),
+`--kind budget` or `--kind all`. The default is spend so that every command and
+cron line written before budgets existed keeps doing exactly what it did. A
+slug named outright is downloaded whatever `--kind` says, because typing
+`mhclg` is already a choice of kind.
+
+The kind decides which tree a source writes to, and nothing else about the
+tool changes between them: same period grammar, same `manifest.json`, same
+resume rules, same politeness.
 
 ## Output layout
 
@@ -47,6 +69,15 @@ data/
     richmond/
       manifest.json
       2026-07__council_expenditure_july_2026.csv
+  budgets/
+    mhclg/
+      manifest.json
+      2026-04_2027-03__RA_2026-27_data_Part_1.ods
+      2026-04_2027-03__counciltax-Table_10_2026-27.ods
+      2026-04_2029-03__CSP_information_table_2026-27_to_2028-29_fLGFS.xlsx
+    richmond-budget/
+      manifest.json
+      2026-04_2027-03__budget_book_2026_27.pdf
 ```
 
 The data directory is the repo root `data/` unless `--data-dir` or
@@ -83,6 +114,11 @@ setting, and `scrooge list` and `scrooge status` do not, because a manifest
 records periods and not the borough that chose the convention. Nothing on disk
 is affected today.
 
+A budget uses the same grammar and nothing new. A budget for 2026-27 is
+`2026-04_2027-03`, Merton's rolling four-year book is `2026-04_2030-03`, and a
+multi-year statistical series is the range of its span. There is still no bare
+`2026`, which for a financial year would be the wrong twelve months.
+
 `manifest.json` records every fetch: URL, period, relative path, bytes, sha256,
 content type, ETag, Last-Modified, timestamp and status. It is rewritten
 atomically after every file, so an interrupted run leaves it consistent with
@@ -115,6 +151,45 @@ Barnet, Bexley, Brent, Hounslow and Lambeth each publish some files covering
 several months at once, and those land as ranges: Bexley's half years,
 Hounslow's four whole financial years, Barnet's 2013/14, Brent's off-cycle
 quarters and Lambeth's April to December 2017.
+
+## Budget sources
+
+Twelve, each verified against the live site on 2026-09-19. "Files" is what a
+full `--kind budget` run discovers today. `mhclg` covers all 33 boroughs at
+once and `london-datastore-counciltax` all 33 council tax bands; the other ten
+are one borough each.
+
+| slug | what | format | years | mutable |
+| --- | --- | --- | --- | --- |
+| mhclg | national returns per authority: RA revenue budget, SG grants, Revenue Outturn time series, QRU quarterly update and its RA crosswalk, CER capital estimates, COR capital outturn, capital time series, council tax levels, Core Spending Power, Section 251 education | ods, xlsx, xls, csv | 2007-08 to 2028-29, 233 files | 7: both time series, QRU, Core Spending Power, Section 251 |
+| london-datastore-counciltax | council tax charge for all eight bands, per borough | xlsx | 1999-00 to 2026-27 in one workbook | yes |
+| richmond-budget | budget book: revenue strategy, tables by committee, capital programme, MTFS | pdf | 2007-08 to 2026-27, 20 files | no |
+| wandsworth-budget | council budget: general fund, capital, HRA, schools, MTFS, pension fund | pdf | 2008-09 to 2026-27, 19 files | no |
+| camden-budget | budget book and budget code book | pdf | 2015-16 to 2026-27, 17 files | no |
+| croydon-budget | budget book, cost-centre level | pdf | 2009-10 to 2026-27, 18 files | no |
+| merton-budget | rolling four-year budget book, business plan before 2023 | pdf | 2013-17 to 2026-30, 13 files | no |
+| lewisham-budget | corporate budget book, directorate by service | pdf | 2012-13 to 2026-27, 17 files | no |
+| hounslow-budget | Budget Setting Meeting pack: report plus appendices A to I | pdf | 2013-14 to 2026-27, 83 files | no |
+| lambeth-budget | Budget Council pack: report, directorate budgets, capital programme, MTFS, alternative budgets | pdf | 2011-12 to 2026-27, 143 files | no |
+| brent-budget | Budget and Council Tax Setting pack, 27 documents a year | pdf | 2020-21 to 2026-27, 184 files | no |
+| haringey-budget | Full Council budget pack with per-directorate appendices | pdf | 2020-21 to 2026-27, 104 files | no |
+
+A few things worth knowing before using any of it.
+
+- MHCLG's RA asset IDs are the middle token of the Revenue Outturn column
+  names, so budget joins to outturn per borough per service line with no fuzzy
+  matching. `qru-QRU_2026-27_Mapping_Document.ods` is the citable authority for
+  where the RA form is coarser than the RO form.
+- The `E09` row in the MHCLG files is the London aggregate, not a borough. It
+  double counts if you keep it.
+- Section 251 keys authorities by DfE LA number, not ONS code, and names them
+  DfE style. It needs a lookup table before it joins to anything else here.
+- The four Modern.Gov sources find the budget meeting by the label the council
+  puts on it. Years the council did not label are not reachable that way, which
+  is why Lambeth has 2011 and then a gap to 2019. Guessing which February
+  meeting was the budget one would mean fetching every agenda to find out.
+- Nothing here is parsed. The budget books are PDFs with real text layers, but
+  turning them into numbers is a later stage's problem.
 
 ## Adding a borough
 
@@ -194,7 +269,12 @@ What the base class gives you:
   appears. `dedupe=False` keeps both anchors when a page points two links at
   one URL and only their labels tell them apart.
 - `datapress_resources(client, base_url, package_id)` for the DataPress portals
-  (Barnet and Brent), which speak the CKAN action API.
+  (Barnet, Brent and the London Datastore), which speak the CKAN action API.
+- `fy_period(start[, end])` and `parse_fy_span(text)` for financial years.
+  `parse_fy_span` reads every spelling on a budget page in one go: `2026/27`,
+  `2026-2027`, `2026 to 2027`, `2026_27`, the en dash Lewisham uses, and the
+  multi-year `2026-2030` Merton publishes. It returns None for a bare `2026`,
+  which does not say which financial year it means.
 
 Rules the registry enforces:
 
@@ -206,6 +286,27 @@ Rules the registry enforces:
 - A module that fails to import is reported as a warning and the other
   boroughs still run.
 
+## Adding a budget source
+
+Same file, same registry, one extra line: `kind = "budget"`. That is all that
+moves it to `data/budgets/` and puts it behind `--kind budget`. Set
+`threshold = "n/a"`, since a budget has no publication threshold, and reuse
+whichever shared base fits:
+
+- `_budgetbook.BudgetBookSource` for a council page listing one PDF per year.
+  Set `link_pattern` (matched against the URL) and `label_pattern` (matched
+  against the link text, which is where the year actually is). Six boroughs
+  use it.
+- `_budgetbook.UmbracoBudgetBookSource` adds a generated-URL fallback for the
+  Richmond and Wandsworth media host, used only when the page stops listing
+  anything.
+- `_moderngov.ModernGovBudgetSource` for a Modern.Gov committee system. Set
+  `host` and `committee_id` (from `GET /mgWebService.asmx/GetCommittees`) and
+  it finds the budget meeting by its status label, then takes the whole pack.
+- `_govuk` for anything on GOV.UK: `collection_documents()` to enumerate years
+  and `release()` to resolve a release's files, so no asset hash is ever
+  hard-coded.
+
 Set `mutable=True` on a `RemoteFile` the publisher overwrites in place, such as
 a cumulative year-to-date export or the month still being added to. Mutable
 files are re-checked on every run, with a conditional request when the server
@@ -213,9 +314,12 @@ supports one, and replaced when the bytes changed. They are never appended to.
 
 ## Not covered
 
-Five boroughs block automated requests and are deliberately left out: Barking
-and Dagenham, Enfield, Kensington and Chelsea, Hammersmith and Fulham, and
-Greenwich. See the politeness section of the runbook.
+Five boroughs block automated requests and are deliberately left out of the
+spend side: Barking and Dagenham, Enfield, Kensington and Chelsea, Hammersmith
+and Fulham, and Greenwich. Twenty-three boroughs' Modern.Gov committee systems
+and both of Lewisham's and Merton's are behind the same kind of shield, which
+is why only four boroughs have a committee budget source. See the politeness
+section of the runbook.
 
 ## Tests
 

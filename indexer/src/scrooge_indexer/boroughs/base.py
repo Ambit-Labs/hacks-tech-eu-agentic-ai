@@ -1,15 +1,17 @@
-"""The interface a borough module implements, and the helpers it can reuse.
+"""The interface a source module implements, and the helpers it can reuse.
 
-Adding a borough is one new file in this package. Subclass :class:`Source`,
-fill in the five class attributes, write ``discover()``, and the registry finds
-it. Nothing else in the codebase is edited, which is the point: several people
-add boroughs at the same time and none of them should have to touch a shared
-file.
+Adding a borough, or a budget publisher, is one new file in this package.
+Subclass :class:`Source`, fill in the five class attributes, write
+``discover()``, and the registry finds it. Nothing else in the codebase is
+edited, which is the point: several people add sources at the same time and
+none of them should have to touch a shared file.
 
 Everything below :class:`Source` is shared plumbing, kept here because the
 first three boroughs already needed it twice: month names as councils spell
 them, UK financial-year arithmetic, period filtering, a link scraper, and a
-DataPress client.
+DataPress client. The underscore-prefixed modules beside this one hold the
+machinery a handful of sources share rather than all of them: an Umbraco media
+host, the GOV.UK content API, Modern.Gov, a budget-book page.
 """
 
 from __future__ import annotations
@@ -27,7 +29,7 @@ import httpx
 from bs4 import BeautifulSoup
 
 from ..http import FetchResult, download_to, request_with_retries
-from ..models import RemoteFile, format_from_name
+from ..models import RemoteFile, SourceKind, format_from_name
 
 MONTH_NAMES = (
     "january",
@@ -52,7 +54,7 @@ DEFAULT_QUARTERS = "financial"
 
 
 class Source(ABC):
-    """One borough's published spending files.
+    """One publisher's files: a borough's spending, or somebody's budget.
 
     Subclasses set the five class attributes and implement :meth:`discover`.
     ``fetch`` already works for the common case (a plain GET that returns the
@@ -63,6 +65,14 @@ class Source(ABC):
     slug: ClassVar[str]
     """Directory name and CLI argument, e.g. ``camden``. Lowercase, hyphens."""
 
+    kind: ClassVar[SourceKind] = "spend"
+    """``spend`` for what a council actually paid, ``budget`` for what it
+    planned to. The default keeps every borough written before budgets existed
+    unchanged, and it decides both the tree the files land in
+    (``data/raw/`` or ``data/budgets/``) and whether ``--kind`` selects this
+    source. A budget source is not a borough: ``mhclg`` covers all 33 at once.
+    """
+
     name: ClassVar[str]
     """The council's own name, e.g. ``Richmond upon Thames``."""
 
@@ -72,8 +82,9 @@ class Source(ABC):
 
     access: ClassVar[str]
     """How the files are reached: ``socrata-api``, ``datapress-api``,
-    ``url-pattern``, ``scrape``. Shown by ``scrooge list`` so an operator can
-    see at a glance which boroughs will break when a CMS is rebuilt."""
+    ``govuk-content-api``, ``moderngov-api``, ``url-pattern``, ``scrape``.
+    Shown by ``scrooge list`` so an operator can see at a glance which sources
+    will break when a CMS is rebuilt."""
 
     landing_page: ClassVar[str]
     """The human page a person should open to check what we are doing."""
@@ -353,6 +364,71 @@ def fy_of_month(period: str) -> int:
 def fy_months(start_year: int) -> list[str]:
     """April of ``start_year`` through March of the next, twelve months."""
     return months_between(month_period(start_year, 4), month_period(start_year + 1, 3))
+
+
+def fy_period(start_year: int, end_year: int | None = None) -> str:
+    """The period for one financial year, or for a run of them.
+
+    ``2026`` is ``2026-04_2027-03``. ``(2026, 2030)`` is April 2026 to March
+    2030, which is what a borough that publishes one budget book covering four
+    years needs, and what MHCLG's multi-year time series needs. ``end_year`` is
+    the calendar year the last financial year *ends* in, the second half of the
+    label the publisher writes, so ``2026-27 to 2029-30`` is ``(2026, 2030)``.
+    """
+    end = end_year if end_year is not None else start_year + 1
+    if end <= start_year:
+        raise ValueError(
+            f"financial year span {start_year}-{end} does not run forwards"
+        )
+    return f"{month_period(start_year, 4)}_{month_period(end, 3)}"
+
+
+#: ``2026-27``, ``2026/2027``, ``2026 to 2027``, ``2026_27``, ``2026–30``: a
+#: four-digit year, a separator, then the other half written long or short.
+#: Councils and MHCLG use every one of these, sometimes two of them on one page.
+_FY_LABEL = re.compile(
+    r"(?<!\d)(?P<first>\d{4})\s*(?:[-/_–—]|to)\s*(?P<second>\d{4}|\d{2})(?!\d)",
+    re.IGNORECASE,
+)
+
+#: Longest span a label may claim before we stop believing it is one. Merton's
+#: rolling budget book runs four years; anything past a decade is two unrelated
+#: numbers that happen to sit next to each other.
+MAX_FY_SPAN = 10
+
+
+def _fy_pair(first: str, second: str) -> tuple[int, int] | None:
+    """``("2026", "27")`` → ``(2026, 2027)``, the years a label's halves mean."""
+    start = int(first)
+    end = int(second) if len(second) == 4 else start - start % 100 + int(second)
+    if len(second) == 2 and end < start:
+        end += 100  # "1999-00" crosses a century.
+    if not 1990 <= start <= 2100 or not 0 < end - start <= MAX_FY_SPAN:
+        return None
+    return start, end
+
+
+def parse_fy_span(text: str) -> tuple[int, int] | None:
+    """The financial years a label names, as ``(first start year, last end year)``.
+
+    "Budget Book 2026/2027" is ``(2026, 2027)``, "Budget Book 2026-2030" is
+    ``(2026, 2030)``, and a title that names two spans, as MHCLG's "2015 to
+    2016 financial year to 2025 to 2026 financial year" does, is read from the
+    start of the first to the end of the last. Pass the result to
+    :func:`fy_period`.
+
+    None when nothing in the text reads as a financial year. A single bare year
+    is deliberately None: "Budget 2026" could be either financial year and the
+    publisher has not said which.
+    """
+    pairs = [
+        pair
+        for match in _FY_LABEL.finditer(text)
+        if (pair := _fy_pair(match.group("first"), match.group("second"))) is not None
+    ]
+    if not pairs:
+        return None
+    return pairs[0][0], max(end for _, end in pairs)
 
 
 def fy_quarter_of_month(period: str) -> tuple[int, int]:

@@ -16,7 +16,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from .boroughs.base import period_bounds
-from .config import raw_dir
+from .config import KIND_DIRS, raw_dir
 from .models import BoroughManifest, ManifestEntry, RemoteFile
 
 MANIFEST_NAME = "manifest.json"
@@ -52,38 +52,49 @@ def safe_filename(name: str, fmt: str | None = None) -> str:
     return f"{cleaned}.{suffix}" if suffix else cleaned
 
 
-def relative_path(remote: RemoteFile) -> str:
-    """``raw/<slug>/<period>__<safe-name>``, relative to the data directory."""
-    return f"raw/{remote.borough}/{remote.period}__{safe_filename(remote.filename, remote.format)}"
+def relative_path(remote: RemoteFile, kind: str = "spend") -> str:
+    """``<tree>/<slug>/<period>__<safe-name>``, relative to the data directory.
+
+    The tree is ``raw`` for spend and ``budgets`` for budgets. Everything after
+    it is identical, so the two kinds are the same layout twice over and a
+    reader that can walk one can walk the other.
+    """
+    name = safe_filename(remote.filename, remote.format)
+    return f"{KIND_DIRS[kind]}/{remote.borough}/{remote.period}__{name}"
 
 
-def dest_path(data_dir: Path, remote: RemoteFile) -> Path:
-    return Path(data_dir) / relative_path(remote)
+def dest_path(data_dir: Path, remote: RemoteFile, kind: str = "spend") -> Path:
+    return Path(data_dir) / relative_path(remote, kind)
 
 
-def manifest_path(data_dir: Path, slug: str) -> Path:
-    return raw_dir(data_dir, slug) / MANIFEST_NAME
+def manifest_path(data_dir: Path, slug: str, kind: str = "spend") -> Path:
+    return raw_dir(data_dir, slug, kind) / MANIFEST_NAME
 
 
-def load(data_dir: Path, slug: str) -> BoroughManifest:
-    """Read a borough's manifest, or an empty one when there is nothing yet.
+def load(data_dir: Path, slug: str, kind: str = "spend") -> BoroughManifest:
+    """Read a source's manifest, or an empty one when there is nothing yet.
 
     A manifest that fails to parse is treated as absent rather than fatal: the
     files are still on disk, and a re-download that rebuilds the record is a
     better outcome than a CLI that refuses to run.
     """
-    path = manifest_path(data_dir, slug)
+    path = manifest_path(data_dir, slug, kind)
+    empty = BoroughManifest(borough=slug, kind=kind)  # type: ignore[arg-type]
     if not path.is_file():
-        return BoroughManifest(borough=slug)
+        return empty
     try:
-        return BoroughManifest.model_validate_json(path.read_text("utf-8"))
+        manifest = BoroughManifest.model_validate_json(path.read_text("utf-8"))
     except (ValueError, OSError):
-        return BoroughManifest(borough=slug)
+        return empty
+    # A manifest written before kinds existed has no field to read, and it can
+    # only be a spend one, so the kind we were asked for wins.
+    manifest.kind = kind  # type: ignore[assignment]
+    return manifest
 
 
 def save(data_dir: Path, manifest: BoroughManifest) -> None:
     """Write the manifest through a temp file and an atomic rename."""
-    path = manifest_path(data_dir, manifest.borough)
+    path = manifest_path(data_dir, manifest.borough, manifest.kind)
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(path.name + ".tmp")
     tmp.write_text(
@@ -109,7 +120,7 @@ def record(
     entry = ManifestEntry(
         url=remote.url,
         period=remote.period,
-        path=relative_path(remote),
+        path=relative_path(remote, manifest.kind),
         bytes=bytes_,
         sha256=sha256,
         content_type=content_type,
@@ -171,9 +182,9 @@ def conditional_headers(
     return headers
 
 
-def files_on_disk(data_dir: Path, slug: str) -> int:
+def files_on_disk(data_dir: Path, slug: str, kind: str = "spend") -> int:
     """Count of completed files, from the manifest rather than a directory scan."""
-    manifest = load(data_dir, slug)
+    manifest = load(data_dir, slug, kind)
     return sum(
         1
         for entry in manifest.entries.values()
@@ -197,9 +208,9 @@ def _last_month(period: str) -> tuple[str, str]:
     return period_bounds(period)[1], period
 
 
-def summarise(data_dir: Path, slug: str) -> dict:
-    """Per-borough numbers for ``scrooge status`` and ``scrooge list``."""
-    manifest = load(data_dir, slug)
+def summarise(data_dir: Path, slug: str, kind: str = "spend") -> dict:
+    """Per-source numbers for ``scrooge status`` and ``scrooge list``."""
+    manifest = load(data_dir, slug, kind)
     ok = [e for e in manifest.entries.values() if e.status == "ok"]
     periods = sorted(e.period for e in ok)
     failures = [

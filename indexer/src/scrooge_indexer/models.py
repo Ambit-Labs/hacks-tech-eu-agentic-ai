@@ -13,7 +13,13 @@ from typing import Literal
 
 from pydantic import BaseModel, Field, field_validator
 
-FileFormat = Literal["csv", "xlsx", "xml", "json", "ods"]
+FileFormat = Literal["csv", "xlsx", "xml", "json", "ods", "pdf"]
+
+#: What a source publishes. ``spend`` is the transaction-level file a council
+#: puts out under the transparency code; ``budget`` is planned spend, which
+#: arrives as a council's budget book or as an MHCLG statistical return. The two
+#: never mix on disk, so a budget book cannot be mistaken for a payment list.
+SourceKind = Literal["spend", "budget"]
 
 #: Status of one manifest entry.
 #:
@@ -37,6 +43,7 @@ EXTENSIONS: dict[str, FileFormat] = {
     ".xml": "xml",
     ".json": "json",
     ".ods": "ods",
+    ".pdf": "pdf",
 }
 
 
@@ -70,6 +77,12 @@ class RemoteFile(BaseModel):
     months it holds, which for a financial year (``2013-04_2014-03``) a
     calendar year could not. A cumulative year-to-date export is the range it
     has reached, with ``mutable=True`` so it is re-checked every run.
+
+    Budget files use the same grammar and nothing new: a budget for 2026-27 is
+    ``2026-04_2027-03``, a budget book covering four years at once is
+    ``2026-04_2030-03``, and a multi-year statistical time series is the range
+    of its span with ``mutable=True``, because the publisher extends it in
+    place when a year closes.
     """
 
     borough: str
@@ -135,9 +148,14 @@ class ManifestEntry(BaseModel):
 
 
 class BoroughManifest(BaseModel):
-    """Every entry for one borough, plus when the borough was last swept."""
+    """Every entry for one source, plus when that source was last swept."""
 
     borough: str
+    kind: SourceKind = "spend"
+    """Which tree the entries live under, so :func:`~scrooge_indexer.manifest.save`
+    and :func:`~scrooge_indexer.manifest.record` can find their own directory
+    without the caller repeating it. Defaults to ``spend``, which is what every
+    manifest written before budgets existed holds."""
     last_run: str | None = None
     entries: dict[str, ManifestEntry] = Field(default_factory=dict)
 

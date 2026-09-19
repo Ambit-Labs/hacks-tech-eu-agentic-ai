@@ -1,8 +1,15 @@
-"""The ``scrooge`` command: list boroughs, download their files, report on disk.
+"""The ``scrooge`` command: list sources, download their files, report on disk.
 
 argparse with one subparser per verb, the same shape as the other CLIs in this
 family. Tables go to stdout so they can be piped; progress and diagnostics go
 to stderr so the pipe stays clean.
+
+``--kind`` defaults to ``spend`` on every verb. Budgets were added after the
+cron lines were written, and a flag that quietly doubled what a nightly run
+fetches would be a rude way to ship them, so budgets are opt-in: ``--kind
+budget`` for those alone, ``--kind all`` for both. Naming a slug outright works
+whatever ``--kind`` says, because somebody who typed ``mhclg`` has already said
+which kind they mean.
 """
 
 from __future__ import annotations
@@ -29,6 +36,14 @@ EXIT_FAILURES = 1
 EXIT_USAGE = 2
 EXIT_INTERRUPTED = 130
 
+KINDS = ("spend", "budget", "all")
+DEFAULT_KIND = "spend"
+
+
+def _of_kind(kind: str) -> list[Source]:
+    """Registered sources of one kind, or every source when ``kind`` is ``all``."""
+    return [s for s in iter_sources() if kind == "all" or s.kind == kind]
+
 
 @dataclass
 class BoroughOutcome:
@@ -51,15 +66,19 @@ class BoroughOutcome:
 
 def cmd_list(args: argparse.Namespace, out: Console, err: Console) -> int:
     data_dir = resolve_data_dir(args.data_dir)
-    table = Table(title=f"Registered boroughs ({data_dir})", title_justify="left")
-    for column in ("slug", "borough", "access", "threshold"):
+    table = Table(
+        title=f"Registered sources, kind={args.kind} ({data_dir})",
+        title_justify="left",
+    )
+    for column in ("slug", "kind", "source", "access", "threshold"):
         table.add_column(column)
     table.add_column("files", justify="right")
     table.add_column("latest")
-    for source in iter_sources():
-        summary = manifest.summarise(data_dir, source.slug)
+    for source in _of_kind(args.kind):
+        summary = manifest.summarise(data_dir, source.slug, source.kind)
         table.add_row(
             source.slug,
+            source.kind,
             source.name,
             source.access,
             source.threshold,
@@ -78,8 +97,9 @@ def cmd_list(args: argparse.Namespace, out: Console, err: Console) -> int:
 
 def cmd_status(args: argparse.Namespace, out: Console, err: Console) -> int:
     data_dir = resolve_data_dir(args.data_dir)
-    table = Table(title=f"On disk ({data_dir})", title_justify="left")
+    table = Table(title=f"On disk, kind={args.kind} ({data_dir})", title_justify="left")
     table.add_column("slug")
+    table.add_column("kind")
     for column in ("files", "bytes"):
         table.add_column(column, justify="right")
     table.add_column("earliest")
@@ -87,12 +107,13 @@ def cmd_status(args: argparse.Namespace, out: Console, err: Console) -> int:
     table.add_column("last run")
     table.add_column("failures", justify="right")
     totals = {"files": 0, "bytes": 0, "failures": 0}
-    for source in iter_sources():
-        summary = manifest.summarise(data_dir, source.slug)
+    for source in _of_kind(args.kind):
+        summary = manifest.summarise(data_dir, source.slug, source.kind)
         for key in totals:
             totals[key] += summary[key]
         table.add_row(
             source.slug,
+            source.kind,
             str(summary["files"]),
             format_bytes(summary["bytes"]),
             summary["earliest"] or "-",
@@ -103,6 +124,7 @@ def cmd_status(args: argparse.Namespace, out: Console, err: Console) -> int:
     table.add_section()
     table.add_row(
         "total",
+        "",
         str(totals["files"]),
         format_bytes(totals["bytes"]),
         "",
@@ -121,14 +143,20 @@ def cmd_status(args: argparse.Namespace, out: Console, err: Console) -> int:
 
 
 def _select_sources(args: argparse.Namespace, err: Console) -> list[Source] | None:
+    """``--all`` respects ``--kind``; a named slug ignores it.
+
+    Somebody who typed ``scrooge download mhclg`` has already chosen a kind,
+    and making them add ``--kind budget`` to be told what they asked for would
+    be a flag getting in the way of the thing it selects.
+    """
     if args.all:
-        return iter_sources()
+        return _of_kind(args.kind)
     chosen = []
     for slug in args.slugs:
         source = get_source(slug)
         if source is None:
             known = ", ".join(s.slug for s in iter_sources()) or "none registered"
-            err.print(f"[red]unknown borough {slug!r}[/]. Known: {known}")
+            err.print(f"[red]unknown source {slug!r}[/]. Known: {known}")
             return None
         chosen.append(source)
     return chosen
@@ -161,7 +189,7 @@ def cmd_download(args: argparse.Namespace, out: Console, err: Console) -> int:
     if sources is None:
         return EXIT_USAGE
     if not sources:
-        err.print("no boroughs registered")
+        err.print(f"no sources registered for --kind {args.kind}")
         return EXIT_USAGE
 
     data_dir = resolve_data_dir(args.data_dir)
@@ -175,7 +203,7 @@ def cmd_download(args: argparse.Namespace, out: Console, err: Console) -> int:
 
     plan: list[tuple[Source, list[RemoteFile]]] = []
     outcomes: dict[str, BoroughOutcome] = {}
-    manifests = {s.slug: manifest.load(data_dir, s.slug) for s in sources}
+    manifests = {s.slug: manifest.load(data_dir, s.slug, s.kind) for s in sources}
     already = 0
     client = make_client(delay=args.delay)
     try:
@@ -196,10 +224,10 @@ def cmd_download(args: argparse.Namespace, out: Console, err: Console) -> int:
             plan.append((source, found))
 
         total = sum(len(found) for _, found in plan)
-        # markup=False: a borough list in square brackets would be eaten as
+        # markup=False: a source list in square brackets would be eaten as
         # Rich markup, and soft_wrap keeps the summary on one line.
         err.print(
-            f"scrooge download: {len(sources)} borough(s) ({slugs}) · "
+            f"scrooge download: {len(sources)} source(s) ({slugs}) · "
             f"{total} file(s) discovered · {already} already on disk · "
             f"{data_dir}",
             highlight=False,
@@ -262,7 +290,7 @@ def _download_borough(
     err: Console,
 ) -> None:
     for remote in found:
-        dest = manifest.dest_path(data_dir, remote)
+        dest = manifest.dest_path(data_dir, remote, source.kind)
         if manifest.should_skip(borough_manifest, remote, data_dir, force=args.force):
             outcome.skipped += 1
             counters["skipped"] += 1
@@ -347,7 +375,7 @@ def _summary_table(
     out: Console, outcomes: dict[str, BoroughOutcome], data_dir: Path
 ) -> None:
     table = Table(title=f"Download summary ({data_dir})", title_justify="left")
-    table.add_column("borough")
+    table.add_column("source")
     for column in ("found", "downloaded", "skipped", "not published", "failed"):
         table.add_column(column, justify="right")
     table.add_column("bytes", justify="right")
@@ -372,6 +400,8 @@ def _resume_command(args: argparse.Namespace) -> str:
     """
     parts = ["scrooge download"]
     parts.append("--all" if args.all else " ".join(args.slugs))
+    if args.all and args.kind != DEFAULT_KIND:
+        parts.append(f"--kind {args.kind}")
     for flag, value in (
         ("--since", args.since),
         ("--until", args.until),
@@ -396,34 +426,49 @@ def _warn_import_errors(err: Console) -> None:
 # --------------------------------------------------------------------------- #
 
 
+def _add_kind(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument(
+        "--kind",
+        choices=KINDS,
+        default=DEFAULT_KIND,
+        help=(
+            f"which sources to act on (default {DEFAULT_KIND}): spend is what "
+            "councils paid, budget is what they planned to spend"
+        ),
+    )
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="scrooge",
         description=(
             "Download London borough council spending files (payments over "
-            "£250/£500) and keep them raw on disk."
+            "£250/£500) and budget files (planned spend), and keep them raw "
+            "on disk."
         ),
     )
     parser.add_argument("--version", action="version", version=f"scrooge {__version__}")
     sub = parser.add_subparsers(dest="command", required=True, metavar="COMMAND")
 
-    p_list = sub.add_parser("list", help="registered boroughs and what is on disk")
+    p_list = sub.add_parser("list", help="registered sources and what is on disk")
     p_list.add_argument("--data-dir", help=f"data directory (${ENV_DATA_DIR})")
+    _add_kind(p_list)
 
     p_download = sub.add_parser(
         "download",
-        help="discover and download files for one or more boroughs",
+        help="discover and download files for one or more sources",
         description=(
-            "Discover what each borough publishes, then download what is not "
+            "Discover what each source publishes, then download what is not "
             "already on disk. Safe to re-run: finished files are skipped."
         ),
     )
     p_download.add_argument(
-        "slugs", nargs="*", metavar="SLUG", help="boroughs to download"
+        "slugs", nargs="*", metavar="SLUG", help="sources to download"
     )
     p_download.add_argument(
-        "--all", action="store_true", help="every registered borough"
+        "--all", action="store_true", help="every registered source of --kind"
     )
+    _add_kind(p_download)
     p_download.add_argument("--since", metavar="YYYY-MM", help="earliest period")
     p_download.add_argument("--until", metavar="YYYY-MM", help="latest period")
     p_download.add_argument(
@@ -446,8 +491,9 @@ def build_parser() -> argparse.ArgumentParser:
         help=f"pause between requests to the same host (default {DEFAULT_DELAY})",
     )
 
-    p_status = sub.add_parser("status", help="per-borough counts from the manifests")
+    p_status = sub.add_parser("status", help="per-source counts from the manifests")
     p_status.add_argument("--data-dir", help=f"data directory (${ENV_DATA_DIR})")
+    _add_kind(p_status)
     return parser
 
 
@@ -474,10 +520,11 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "download":
         if not args.slugs and not args.all:
             err.print(
-                "nothing to download. Name one or more boroughs, or pass --all:\n"
+                "nothing to download. Name one or more sources, or pass --all:\n"
                 "  scrooge download camden richmond\n"
                 "  scrooge download --all --since 2026-01\n"
-                "  scrooge list   # to see the registered slugs",
+                "  scrooge download --all --kind budget\n"
+                "  scrooge list --kind all   # to see the registered slugs",
                 highlight=False,
             )
             return EXIT_USAGE

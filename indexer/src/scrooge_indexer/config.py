@@ -85,6 +85,18 @@ def resolve_data_dir(override: str | Path | None = None) -> Path:
     return (root / "data") if root else Path("data")
 
 
-def raw_dir(data_dir: Path, slug: str) -> Path:
-    """Where one borough's untouched files live: ``<data>/raw/<slug>``."""
-    return Path(data_dir) / "raw" / slug
+#: Top-level directory per source kind. Spend files keep the ``raw/`` tree they
+#: have always had, so nothing already on disk moves; budgets get their own
+#: tree because a budget book and a payment list answer different questions and
+#: a later stage should never have to tell them apart by filename.
+KIND_DIRS = {"spend": "raw", "budget": "budgets"}
+
+
+def kind_dir(data_dir: Path, kind: str) -> Path:
+    """``<data>/raw`` or ``<data>/budgets``."""
+    return Path(data_dir) / KIND_DIRS[kind]
+
+
+def raw_dir(data_dir: Path, slug: str, kind: str = "spend") -> Path:
+    """Where one source's untouched files live: ``<data>/<tree>/<slug>``."""
+    return kind_dir(data_dir, kind) / slug

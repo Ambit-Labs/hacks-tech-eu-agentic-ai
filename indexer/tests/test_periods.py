@@ -13,6 +13,7 @@ from scrooge_indexer.boroughs.base import (
     fy_label,
     fy_months,
     fy_of_month,
+    fy_period,
     fy_quarter_bounds,
     fy_quarter_from_label,
     fy_quarter_months,
@@ -23,6 +24,7 @@ from scrooge_indexer.boroughs.base import (
     month_name,
     month_span,
     months_between,
+    parse_fy_span,
     parse_month_name,
     parse_period,
     period_bounds,
@@ -105,6 +107,56 @@ def test_fy_helpers():
     assert fy_months(2026)[0] == "2026-04"
     assert fy_months(2026)[-1] == "2027-03"
     assert len(fy_months(2026)) == 12
+
+
+def test_fy_period_is_april_to_march():
+    assert fy_period(2026) == "2026-04_2027-03"
+    assert fy_period(2026, 2030) == "2026-04_2030-03"
+    assert fy_period(1999, 2027) == "1999-04_2027-03"
+
+
+def test_fy_period_refuses_a_span_that_does_not_run_forwards():
+    with pytest.raises(ValueError, match="does not run forwards"):
+        fy_period(2026, 2026)
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        # Every spelling on a borough budget page or an MHCLG filename.
+        ("Budget Book 2026/2027", (2026, 2027)),
+        ("Council budget 2026/27", (2026, 2027)),
+        ("Budget Book 2022-23 ( PDF , 2.3MB )", (2022, 2023)),
+        ("budget book 2020 - 21", (2020, 2021)),
+        ("Corporate Budget Book 2019–20", (2019, 2020)),  # en dash
+        ("QRU1_2026_27.ods", (2026, 2027)),
+        ("Revenue account (RA) budget 2015 to 2016", (2015, 2016)),
+        # A book covering several years says so, and the century rolls over.
+        ("Budget Book 2026-2030", (2026, 2030)),
+        ("Business Plan 2013-17", (2013, 2017)),
+        ("Council Tax Charges 1999-00", (1999, 2000)),
+        # Two spans in one title: first start to last end.
+        (
+            "planned expenditure 2015 to 2016 financial year to "
+            "2025 to 2026 financial year",
+            (2015, 2026),
+        ),
+        ("settlement 2026-27 to 2028-29", (2026, 2029)),
+        # A bare year does not say which financial year it means.
+        ("Budget 2026", None),
+        ("Table_7_24-25__revised_.ods", None),
+        ("no year here at all", None),
+        # A ten-year gap is the limit; past it these are two unrelated numbers.
+        ("reference 2010-2050", None),
+    ],
+)
+def test_parse_fy_span(text, expected):
+    assert parse_fy_span(text) == expected
+
+
+def test_a_file_size_in_a_label_is_not_a_financial_year():
+    """Richmond prints "(pdf, 1833KB)" after every link."""
+    assert parse_fy_span("Budget Book 2015/2016 (pdf, 1833KB)") == (2015, 2016)
 
 
 def test_fy_quarters_start_in_april():

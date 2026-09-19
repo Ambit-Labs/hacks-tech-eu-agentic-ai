@@ -133,7 +133,9 @@ def test_a_label_with_no_quarter_is_counted_not_guessed_at(client_for, caplog):
         )
         return httpx.Response(200, text=page, headers={"Content-Type": "text/html"})
 
-    with caplog.at_level(logging.WARNING, logger="scrooge_indexer.boroughs.westminster"):
+    with caplog.at_level(
+        logging.WARNING, logger="scrooge_indexer.boroughs.westminster"
+    ):
         files = Westminster().discover(client_for(handler), None, None)
     assert "skipped 1 expenditure link(s)" in caplog.text
     assert "2026-Q1" not in {f.period for f in files}
