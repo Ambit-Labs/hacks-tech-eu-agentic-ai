@@ -9,6 +9,7 @@ given, swaps in the new host and port, reopens the pool and retries once.
 
 from __future__ import annotations
 
+import asyncio
 import urllib.parse
 from collections.abc import Callable, Mapping
 from typing import Any
@@ -96,7 +97,9 @@ class Database:
             # would cost a Modal call and run the slow query a second time.
             raise
         except psycopg.OperationalError:
-            self._url = self._resolver(self._url)
+            # The resolver is a blocking Modal round trip. On the event loop it
+            # would stall every other request in flight, not only this one.
+            self._url = await asyncio.to_thread(self._resolver, self._url)
             await self.close()
             await self.open()
             return await self._run(sql, params)
