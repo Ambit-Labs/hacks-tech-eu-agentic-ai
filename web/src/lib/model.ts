@@ -1,8 +1,8 @@
 /**
  * The single place the chat's language model is chosen.
  *
- * Everything else in the app (the route handler, the header badge) imports from
- * here, so swapping providers is one edit in this file. Keep provider names and
+ * The route handler imports from here, so swapping providers is one edit in
+ * this file. Keep provider names and
  * provider-specific options inside this module.
  */
 
@@ -12,9 +12,6 @@ import type { LanguageModel } from "ai";
 const MODEL_ID = "gemini-3.8-flash";
 
 const API_KEY_ENV = "GOOGLE_AI_STUDIO_KEY";
-
-/** Shown in the header badge. */
-export const CHAT_MODEL_LABEL = "Gemini 3.8 Flash";
 
 /** Name of the env var the route reports when the model cannot be built. */
 export const CHAT_MODEL_API_KEY_ENV = API_KEY_ENV;

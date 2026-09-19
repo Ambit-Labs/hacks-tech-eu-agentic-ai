@@ -68,111 +68,132 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  /* Sampled from public/scrooge-ui-demo.png: warm paper surfaces, navy ink,
+     terracotta actions. Hex equivalents sit next to the tokens they came from. */
+  --background: oklch(0.991 0.003 84.6); /* #fdfcfa main pane */
+  --foreground: oklch(0.203 0.047 262.9); /* #0b162c ink */
+  --card: oklch(0.988 0.003 84.6); /* #fcfbf9 evidence cards */
+  --card-foreground: oklch(0.203 0.047 262.9);
+  --popover: oklch(0.991 0.003 84.6);
+  --popover-foreground: oklch(0.203 0.047 262.9);
+  --primary: oklch(0.568 0.109 35); /* #ad5d49 New chat and send buttons */
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(0.956 0.006 31.1); /* #f4efee user bubble */
+  --secondary-foreground: oklch(0.203 0.047 262.9);
+  --muted: oklch(0.97 0.001 286.4); /* #f5f5f6 assistant bubble */
+  --muted-foreground: oklch(0.502 0.024 264.3); /* #5d6472 captions, timestamps */
+  --accent: oklch(0.943 0.007 53.4); /* #f0ebe8 selected chat row */
+  --accent-foreground: oklch(0.203 0.047 262.9);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
+  --border: oklch(0.901 0.004 286.3); /* #dedee1 card outline */
+  --input: oklch(0.894 0.003 264.5); /* #dbdcde composer outline */
+  --ring: oklch(0.568 0.109 35);
+  /* One terracotta ramp. chart-5 is the strongest end and matches --primary,
+     chart-1 the faintest. */
+  --chart-1: oklch(0.92 0.03 35);
+  --chart-2: oklch(0.83 0.06 35);
+  --chart-3: oklch(0.74 0.085 35);
+  --chart-4: oklch(0.65 0.1 35);
+  --chart-5: oklch(0.568 0.109 35);
   --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar: oklch(0.974 0.006 84.6); /* #f8f6f2 */
+  --sidebar-foreground: oklch(0.203 0.047 262.9);
+  --sidebar-primary: oklch(0.568 0.109 35);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(0.943 0.007 53.4);
+  --sidebar-accent-foreground: oklch(0.203 0.047 262.9);
+  --sidebar-border: oklch(0.95 0.006 75.4); /* #f1eeea */
+  --sidebar-ring: oklch(0.568 0.109 35);
 }
 
 .dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+  /* The mockup is light only. This palette is derived from it: the navy ink
+     becomes the surface, the paper becomes the text, and the terracotta is
+     lifted so it holds contrast on navy. */
+  --background: oklch(0.175 0.025 263);
+  --foreground: oklch(0.96 0.006 84.6);
+  --card: oklch(0.215 0.027 263);
+  --card-foreground: oklch(0.96 0.006 84.6);
+  --popover: oklch(0.215 0.027 263);
+  --popover-foreground: oklch(0.96 0.006 84.6);
+  --primary: oklch(0.68 0.11 35);
+  --primary-foreground: oklch(0.175 0.025 263);
+  --secondary: oklch(0.27 0.025 263);
+  --secondary-foreground: oklch(0.96 0.006 84.6);
+  --muted: oklch(0.25 0.022 263);
+  --muted-foreground: oklch(0.72 0.02 264);
+  --accent: oklch(0.29 0.028 263);
+  --accent-foreground: oklch(0.96 0.006 84.6);
   --destructive: oklch(0.704 0.191 22.216);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
+  --ring: oklch(0.68 0.11 35);
+  /* The chart ramp is reversed against the light palette so chart-5 stays the
+     strongest end in both themes and chart-1 the faintest. */
+  --chart-1: oklch(0.32 0.05 35);
+  --chart-2: oklch(0.42 0.075 35);
+  --chart-3: oklch(0.52 0.095 35);
+  --chart-4: oklch(0.62 0.11 35);
+  --chart-5: oklch(0.74 0.1 35);
+  --sidebar: oklch(0.2 0.026 263);
+  --sidebar-foreground: oklch(0.96 0.006 84.6);
+  --sidebar-primary: oklch(0.68 0.11 35);
+  --sidebar-primary-foreground: oklch(0.175 0.025 263);
+  --sidebar-accent: oklch(0.29 0.028 263);
+  --sidebar-accent-foreground: oklch(0.96 0.006 84.6);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --sidebar-ring: oklch(0.68 0.11 35);
 }
 
-/* `.dark` above is the explicit switch. The app ships no theme toggle, so the
-   same palette is mirrored onto the OS setting. Put class="light" on <html>
-   to pin the light palette. */
+/* `.dark` above is the explicit switch. The same palette is mirrored onto the
+   OS setting for the "System" choice in the settings popover, which leaves
+   <html> with neither class. The root layout ships class="light", the default,
+   and that pins the light palette. */
 @media (prefers-color-scheme: dark) {
   :root:not(.light) {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
+    --background: oklch(0.175 0.025 263);
+    --foreground: oklch(0.96 0.006 84.6);
+    --card: oklch(0.215 0.027 263);
+    --card-foreground: oklch(0.96 0.006 84.6);
+    --popover: oklch(0.215 0.027 263);
+    --popover-foreground: oklch(0.96 0.006 84.6);
+    --primary: oklch(0.68 0.11 35);
+    --primary-foreground: oklch(0.175 0.025 263);
+    --secondary: oklch(0.27 0.025 263);
+    --secondary-foreground: oklch(0.96 0.006 84.6);
+    --muted: oklch(0.25 0.022 263);
+    --muted-foreground: oklch(0.72 0.02 264);
+    --accent: oklch(0.29 0.028 263);
+    --accent-foreground: oklch(0.96 0.006 84.6);
     --destructive: oklch(0.704 0.191 22.216);
     --border: oklch(1 0 0 / 10%);
     --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.488 0.243 264.376);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
+    --ring: oklch(0.68 0.11 35);
+    --chart-1: oklch(0.32 0.05 35);
+    --chart-2: oklch(0.42 0.075 35);
+    --chart-3: oklch(0.52 0.095 35);
+    --chart-4: oklch(0.62 0.11 35);
+    --chart-5: oklch(0.74 0.1 35);
+    --sidebar: oklch(0.2 0.026 263);
+    --sidebar-foreground: oklch(0.96 0.006 84.6);
+    --sidebar-primary: oklch(0.68 0.11 35);
+    --sidebar-primary-foreground: oklch(0.175 0.025 263);
+    --sidebar-accent: oklch(0.29 0.028 263);
+    --sidebar-accent-foreground: oklch(0.96 0.006 84.6);
     --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.556 0 0);
+    --sidebar-ring: oklch(0.68 0.11 35);
   }
+}
+
+/* Native controls and scrollbars follow the same switch as the tokens. */
+:root {
+  color-scheme: light dark;
+}
+:root.light {
+  color-scheme: light;
+}
+:root.dark {
+  color-scheme: dark;
 }
 
 @layer base {
