@@ -51,12 +51,16 @@ async def test_health_reports_model_and_database(client):
 
 async def test_chat_streams_a_reply(client):
     c, main = client
-    with main.app.state.agent.override(model=TestModel(call_tools=[], custom_output_text="Hello from Scrooge")):
+    with main.app.state.agent.override(
+        model=TestModel(call_tools=[], custom_output_text="Hello from Scrooge")
+    ):
         body = {
             "id": "chat1",
             "trigger": "submit-message",
             "messageId": "m1",
-            "messages": [{"id": "u1", "role": "user", "parts": [{"type": "text", "text": "hi"}]}],
+            "messages": [
+                {"id": "u1", "role": "user", "parts": [{"type": "text", "text": "hi"}]}
+            ],
         }
         r = await c.post("/chat", json=body)
     assert r.status_code == 200
@@ -76,7 +80,9 @@ async def test_chat_stops_a_looping_model_and_says_so(client):
         # A model that only ever calls a tool again, the loop #10 ran into.
         nonlocal calls
         calls += 1
-        yield {0: DeltaToolCall(name="coverage", json_args="{}", tool_call_id=f"c{calls}")}
+        yield {
+            0: DeltaToolCall(name="coverage", json_args="{}", tool_call_id=f"c{calls}")
+        }
 
     with main.app.state.agent.override(model=FunctionModel(stream_function=stream_fn)):
         body = {
@@ -84,7 +90,11 @@ async def test_chat_stops_a_looping_model_and_says_so(client):
             "trigger": "submit-message",
             "messageId": "m1",
             "messages": [
-                {"id": "u1", "role": "user", "parts": [{"type": "text", "text": "capita?"}]}
+                {
+                    "id": "u1",
+                    "role": "user",
+                    "parts": [{"type": "text", "text": "capita?"}],
+                }
             ],
         }
         r = await c.post("/chat", json=body)
@@ -105,6 +115,8 @@ async def test_chat_without_database_is_a_clear_500(database_url, monkeypatch):
     async with main.lifespan(main.app):
         transport = httpx.ASGITransport(app=main.app)
         async with httpx.AsyncClient(transport=transport, base_url="http://test") as c:
-            r = await c.post("/chat", json={"id": "x", "trigger": "submit-message", "messages": []})
+            r = await c.post(
+                "/chat", json={"id": "x", "trigger": "submit-message", "messages": []}
+            )
     assert r.status_code == 500
     assert "DATABASE_URL" in r.json()["error"]

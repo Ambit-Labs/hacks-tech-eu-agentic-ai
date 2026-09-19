@@ -1,3 +1,5 @@
+import psycopg
+
 from config import DEFAULT_MODEL, Settings
 
 
@@ -43,9 +45,6 @@ def test_blank_values_count_as_missing():
     settings = Settings.from_env({"GOOGLE_AI_STUDIO_KEY": "", "DATABASE_URL": ""})
     assert settings.google_api_key is None
     assert settings.database_url is None
-
-
-import psycopg
 
 
 def test_seed_is_loaded(database_url):

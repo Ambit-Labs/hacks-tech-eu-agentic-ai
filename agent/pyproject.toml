@@ -23,8 +23,17 @@ dev = [
     "httpx>=0.28",
     "pytest>=8",
     "pytest-asyncio>=0.24",
+    "ruff>=0.16.8",
 ]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+# Same set as indexer/ and infra/, so a file moved between the projects keeps
+# its import order and its modern syntax.
+select = ["E4", "E7", "E9", "F", "I", "UP"]

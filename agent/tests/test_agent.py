@@ -35,17 +35,35 @@ async def deps(database_url):
 
 
 def test_build_model_test_string():
-    model = build_model(Settings(model="test", google_api_key=None, database_url=None, environment="dev"))
+    model = build_model(
+        Settings(
+            model="test", google_api_key=None, database_url=None, environment="dev"
+        )
+    )
     assert isinstance(model, TestModel)
 
 
 def test_build_model_google_needs_key():
     with pytest.raises(RuntimeError, match="GOOGLE_AI_STUDIO_KEY"):
-        build_model(Settings(model="google:gemini-3.8-flash", google_api_key=None, database_url=None, environment="dev"))
+        build_model(
+            Settings(
+                model="google:gemini-3.8-flash",
+                google_api_key=None,
+                database_url=None,
+                environment="dev",
+            )
+        )
 
 
 def test_build_model_google_with_key():
-    model = build_model(Settings(model="google:gemini-3.8-flash", google_api_key="k", database_url=None, environment="dev"))
+    model = build_model(
+        Settings(
+            model="google:gemini-3.8-flash",
+            google_api_key="k",
+            database_url=None,
+            environment="dev",
+        )
+    )
     assert model.model_name == "gemini-3.8-flash"
 
 
@@ -117,12 +135,22 @@ async def test_tool_call_reaches_the_database(deps):
     def model_fn(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
         last = messages[-1]
         if any(isinstance(p, ToolReturnPart) for p in last.parts):
-            return ModelResponse(parts=[TextPart("Camden spent £10,000 in September 2019 across 6 payments.")])
+            return ModelResponse(
+                parts=[
+                    TextPart(
+                        "Camden spent £10,000 in September 2019 across 6 payments."
+                    )
+                ]
+            )
         return ModelResponse(
             parts=[
                 ToolCallPart(
                     "spend_total",
-                    {"borough": "camden", "period_from": "2019-09-01", "period_to": "2019-09-30"},
+                    {
+                        "borough": "camden",
+                        "period_from": "2019-09-01",
+                        "period_to": "2019-09-30",
+                    },
                 )
             ]
         )
@@ -131,8 +159,11 @@ async def test_tool_call_reaches_the_database(deps):
     result = await agent.run("How much did Camden spend in September 2019?", deps=deps)
     assert result.output.startswith("Camden spent")
     returns = [
-        p for m in result.all_messages() if isinstance(m, ModelRequest)
-        for p in m.parts if isinstance(p, ToolReturnPart)
+        p
+        for m in result.all_messages()
+        if isinstance(m, ModelRequest)
+        for p in m.parts
+        if isinstance(p, ToolReturnPart)
     ]
     assert len(returns) == 1
     assert returns[0].content.total_gbp == 10000.0

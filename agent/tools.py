@@ -261,7 +261,11 @@ async def spend_total(
         params,
     )
     matched = await _matched(
-        ctx.deps.db, where, params, department=bool(department_like), purpose=bool(purpose_like)
+        ctx.deps.db,
+        where,
+        params,
+        department=bool(department_like),
+        purpose=bool(purpose_like),
     )
     return SpendTotal(
         borough=_slug(borough),
@@ -299,21 +303,26 @@ async def spend_by(
         params,
     )
     matched = await _matched(
-        ctx.deps.db, where, params, department=bool(department_like), purpose=bool(purpose_like)
+        ctx.deps.db,
+        where,
+        params,
+        department=bool(department_like),
+        purpose=bool(purpose_like),
     )
     return SpendBy(
         borough=_slug(borough),
         period_from=period_from,
         period_to=period_to,
         group_by=group_by,
-        rows=[GroupRow(key=r["key"], total_gbp=float(r["total"]), payments=r["n"]) for r in rows],
+        rows=[
+            GroupRow(key=r["key"], total_gbp=float(r["total"]), payments=r["n"])
+            for r in rows
+        ],
         matched=matched,
     )
 
 
-PAYMENT_COLUMNS = (
-    "borough, payment_date, supplier, directorate, department, purpose, amount_gbp, reference"
-)
+PAYMENT_COLUMNS = "borough, payment_date, supplier, directorate, department, purpose, amount_gbp, reference"
 
 
 class Payment(BaseModel):
@@ -376,7 +385,9 @@ def _payment(r: dict[str, Any]) -> Payment:
     )
 
 
-async def _payment_set(db: Database, where: str, params: dict[str, Any], *, order: str, limit: int) -> Payments:
+async def _payment_set(
+    db: Database, where: str, params: dict[str, Any], *, order: str, limit: int
+) -> Payments:
     totals = await db.fetch_all(
         f"SELECT coalesce(sum(amount_gbp), 0) AS total, count(*) AS n FROM payments WHERE {where}",
         params,
@@ -401,7 +412,10 @@ async def supplier_payments(
 ) -> SupplierPayments:
     """Everything paid to suppliers whose name contains the given words, ignoring case and punctuation, between two dates: the total, the count, the first and last payment date, the total per borough biggest first, and the payments. The name matches whole words, so "capita" finds CAPITA BUSINESS SERVICES and not CAPITAL WORKS LTD. One call covers every borough: leave borough empty and read by_borough, rather than calling this once per borough or once per year."""
     where, params = _filters(
-        period_from=period_from, period_to=period_to, borough=borough, supplier_like=supplier_like
+        period_from=period_from,
+        period_to=period_to,
+        borough=borough,
+        supplier_like=supplier_like,
     )
     summary = await ctx.deps.db.fetch_all(
         "SELECT coalesce(sum(amount_gbp), 0) AS total, count(*) AS n,"
@@ -425,7 +439,8 @@ async def supplier_payments(
         supplier_like=supplier_like,
         boroughs=sorted(s["boroughs"] or []),
         by_borough=[
-            GroupRow(key=r["key"], total_gbp=float(r["total"]), payments=r["n"]) for r in by_borough
+            GroupRow(key=r["key"], total_gbp=float(r["total"]), payments=r["n"])
+            for r in by_borough
         ],
         total_gbp=float(s["total"]),
         payments=s["n"],
@@ -455,7 +470,11 @@ async def largest_payments(
         purpose_like=purpose_like,
     )
     return await _payment_set(
-        ctx.deps.db, where, params, order="amount_gbp DESC, payment_date DESC, id", limit=limit
+        ctx.deps.db,
+        where,
+        params,
+        order="amount_gbp DESC, payment_date DESC, id",
+        limit=limit,
     )
 
 
@@ -470,10 +489,18 @@ async def search_payments(
 ) -> Payments:
     """Payments whose supplier, purpose or department contains the given text, between two dates. Use it for "show me the payments for" questions about a topic such as parks, roads, libraries or consultants. total_gbp and payments cover every matching payment, not only the rows returned."""
     where, params = _filters(
-        period_from=period_from, period_to=period_to, borough=borough, min_amount=min_amount, text=text
+        period_from=period_from,
+        period_to=period_to,
+        borough=borough,
+        min_amount=min_amount,
+        text=text,
     )
     return await _payment_set(
-        ctx.deps.db, where, params, order="payment_date DESC, amount_gbp DESC, id", limit=limit
+        ctx.deps.db,
+        where,
+        params,
+        order="payment_date DESC, amount_gbp DESC, id",
+        limit=limit,
     )
 
 
@@ -505,7 +532,11 @@ async def compare_boroughs(
         params,
     )
     matched = await _matched(
-        ctx.deps.db, where, params, department=bool(department_like), purpose=bool(purpose_like)
+        ctx.deps.db,
+        where,
+        params,
+        department=bool(department_like),
+        purpose=bool(purpose_like),
     )
     out: list[ComparisonRow] = []
     for r in rows:
@@ -520,7 +551,9 @@ async def compare_boroughs(
                 gbp_per_resident=(total / population) if population else None,
             )
         )
-    return BoroughComparison(period_from=period_from, period_to=period_to, rows=out, matched=matched)
+    return BoroughComparison(
+        period_from=period_from, period_to=period_to, rows=out, matched=matched
+    )
 
 
 ALL_TOOLS = [

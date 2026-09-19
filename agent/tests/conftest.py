@@ -68,9 +68,16 @@ def database_url() -> Iterator[str]:
     container = f"scrooge-test-{uuid.uuid4().hex[:8]}"
     subprocess.run(
         [
-            "docker", "run", "-d", "--rm", "--name", container,
-            "-e", f"POSTGRES_PASSWORD={PASSWORD}",
-            "-p", "127.0.0.1::5432",
+            "docker",
+            "run",
+            "-d",
+            "--rm",
+            "--name",
+            container,
+            "-e",
+            f"POSTGRES_PASSWORD={PASSWORD}",
+            "-p",
+            "127.0.0.1::5432",
             IMAGE,
         ],
         check=True,

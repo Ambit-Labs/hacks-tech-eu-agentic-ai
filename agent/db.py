@@ -35,7 +35,9 @@ def with_endpoint(url: str, host: str, port: int) -> str:
     parts = urllib.parse.urlsplit(url)
     userinfo, _, _ = parts.netloc.rpartition("@")
     netloc = f"{userinfo}@{host}:{port}" if userinfo else f"{host}:{port}"
-    return urllib.parse.urlunsplit((parts.scheme, netloc, parts.path, parts.query, parts.fragment))
+    return urllib.parse.urlunsplit(
+        (parts.scheme, netloc, parts.path, parts.query, parts.fragment)
+    )
 
 
 def resolve_from_modal(url: str) -> str:
@@ -67,7 +69,9 @@ class Database:
     it, and not from startup.
     """
 
-    def __init__(self, url: str, *, resolver: Callable[[str], str] = resolve_from_modal) -> None:
+    def __init__(
+        self, url: str, *, resolver: Callable[[str], str] = resolve_from_modal
+    ) -> None:
         self._url = url
         self._resolver = resolver
         self._pool: AsyncConnectionPool | None = None
@@ -88,7 +92,9 @@ class Database:
             await self._pool.close()
             self._pool = None
 
-    async def fetch_all(self, sql: str, params: Mapping[str, Any] | None = None) -> list[dict[str, Any]]:
+    async def fetch_all(
+        self, sql: str, params: Mapping[str, Any] | None = None
+    ) -> list[dict[str, Any]]:
         """Run one statement and return every row as a dict."""
         try:
             return await self._run(sql, params)
@@ -104,7 +110,9 @@ class Database:
             await self.open()
             return await self._run(sql, params)
 
-    async def _run(self, sql: str, params: Mapping[str, Any] | None) -> list[dict[str, Any]]:
+    async def _run(
+        self, sql: str, params: Mapping[str, Any] | None
+    ) -> list[dict[str, Any]]:
         if self._pool is None:
             raise RuntimeError("Database.open() was not called")
         async with self._pool.connection() as conn:

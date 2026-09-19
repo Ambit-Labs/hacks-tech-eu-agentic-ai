@@ -28,7 +28,10 @@ def test_resolve_from_modal_names_the_token_vars(monkeypatch):
 
 def test_with_endpoint_keeps_credentials_and_database():
     url = "postgresql://agent:p%40ss@old-host:1111/postgres"
-    assert with_endpoint(url, "new-host", 2222) == "postgresql://agent:p%40ss@new-host:2222/postgres"
+    assert (
+        with_endpoint(url, "new-host", 2222)
+        == "postgresql://agent:p%40ss@new-host:2222/postgres"
+    )
 
 
 def test_with_endpoint_without_userinfo():
@@ -81,7 +84,9 @@ async def test_statement_timeout_does_not_reresolve(database_url):
     await db.open()
     try:
         with pytest.raises(psycopg.errors.QueryCanceled):
-            await db.fetch_all("SET LOCAL statement_timeout = '100ms'; SELECT pg_sleep(1)")
+            await db.fetch_all(
+                "SET LOCAL statement_timeout = '100ms'; SELECT pg_sleep(1)"
+            )
     finally:
         await db.close()
     assert calls == []

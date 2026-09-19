@@ -124,6 +124,13 @@ cd agent && uv run pytest -q     # needs Docker, starts a throwaway postgres:17
 cd web && bun run lint && bun run format:check
 ```
 
+The three Python projects share one ruff config, in each `pyproject.toml`.
+Run it per project:
+
+```sh
+cd agent && uv run ruff check . && uv run ruff format --check .
+```
+
 The indexer's loader tests against a real database skip themselves unless
 `SCROOGE_TEST_DATABASE_URL` is set. No test calls a real model.
 

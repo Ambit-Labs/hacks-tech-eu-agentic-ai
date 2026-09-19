@@ -123,6 +123,7 @@ after a cold start spends about a second re-reading it.
 
 ```bash
 uv run pytest -q
+uv run ruff check . && uv run ruff format --check .
 ```
 
 Needs Docker. The session starts one `postgres:17` container, applies
