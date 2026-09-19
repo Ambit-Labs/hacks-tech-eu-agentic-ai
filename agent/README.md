@@ -22,9 +22,10 @@ and `DATABASE_URL`; see the table below. Without `DATABASE_URL` the server
 starts and `/chat` answers 500 naming the variable. Without the model key it
 does not start.
 
-Until a gateway key exists, put `AGENT_MODEL=google:gemini-3.6-flash` in front
-of the command so the AI Studio key is used; AI Studio accepted that model
-name on 2026-09-19.
+The gateway key is in place since 2026-09-19, so that command needs nothing in
+front of it. When the gateway is unavailable, put
+`AGENT_MODEL=google:gemini-3.6-flash` in front of it instead: that calls AI
+Studio directly and uses `GOOGLE_AI_STUDIO_KEY`.
 
 `DATABASE_URL` is built from the infra CLI: `cd ../infra && uv run pg url`
 gives the superuser URL; replace the user and password with the `agent`
@@ -68,7 +69,8 @@ was used, the distinct values it matched.
 | Name | Meaning |
 | --- | --- |
 | `PYDANTIC_AI_GATEWAY_API_KEY` | Pydantic AI Gateway key. Required for the default model, which the gateway routes to Vertex. |
-| `AGENT_MODEL` | Pydantic AI model string. Default `gateway/google-cloud:gemini-3.6-flash`. `google:<model>` calls Gemini directly and then needs `GOOGLE_AI_STUDIO_KEY`. `test` gives a fake model for local checks. |
+| `PYDANTIC_AI_GATEWAY_BASE_URL` | Optional; the key carries the region, so it can stay unset. When set it must be the proxy root, `https://gateway-eu.pydantic.dev/proxy`. Pydantic AI appends the provider route (`/google-vertex`) itself, so a base URL that already ends in a route name gives 404. |
+| `AGENT_MODEL` | Pydantic AI model string. Default `gateway/google-cloud:gemini-3.6-flash`. `gateway/google-cloud:gemini-3.8-flash` works too; both answered through the gateway on 2026-09-19. `gateway/google:` is an alias of `gateway/google-cloud:`. `google:<model>` calls Gemini directly and then needs `GOOGLE_AI_STUDIO_KEY`. `test` gives a fake model for local checks. |
 | `GOOGLE_AI_STUDIO_KEY` | Gemini API key. Only when `AGENT_MODEL` starts with `google:`. |
 | `DATABASE_URL` | `postgresql://agent:<password>@<host>:<port>/postgres` |
 | `LOGFIRE_TOKEN` | Logfire write token for the `hacks-eu-agentic` project. Without it nothing is sent. |
