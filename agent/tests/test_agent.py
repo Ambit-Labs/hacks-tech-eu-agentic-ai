@@ -96,4 +96,12 @@ async def test_every_tool_is_registered(deps):
         return ModelResponse(parts=[TextPart("done")])
 
     await build_agent(FunctionModel(model_fn)).run("hi", deps=deps)
-    assert calls == {"coverage", "spend_total"}
+    assert calls == {
+        "coverage",
+        "spend_total",
+        "spend_by",
+        "supplier_payments",
+        "largest_payments",
+        "search_payments",
+        "compare_boroughs",
+    }

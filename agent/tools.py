@@ -237,6 +237,251 @@ async def spend_total(
     )
 
 
-# Issue #4 adds spend_by, supplier_payments, largest_payments, search_payments
-# and compare_boroughs here, taking this list to seven.
-ALL_TOOLS = [coverage, spend_total]
+async def spend_by(
+    ctx: RunContext[Deps],
+    borough: str,
+    period_from: date,
+    period_to: date,
+    group_by: GroupBy,
+    department_like: str | None = None,
+    purpose_like: str | None = None,
+    limit: int = 20,
+) -> SpendBy:
+    """Spend of one borough between two dates broken down by department, purpose, supplier, month or financial year. Biggest first, except month and financial_year which come in date order. Use it for top suppliers, which department spends most, and trends over time."""
+    where, params = _filters(
+        period_from=period_from,
+        period_to=period_to,
+        borough=borough,
+        department_like=department_like,
+        purpose_like=purpose_like,
+    )
+    expr = GROUP_EXPR[group_by]
+    order = "key" if group_by in ("month", "financial_year") else "total DESC, key"
+    rows = await ctx.deps.db.fetch_all(
+        f"SELECT {expr} AS key, sum(amount_gbp) AS total, count(*) AS n FROM payments"
+        f" WHERE {where} GROUP BY key ORDER BY {order} LIMIT {_clamp(limit)}",
+        params,
+    )
+    matched = await _matched(
+        ctx.deps.db, where, params, department=bool(department_like), purpose=bool(purpose_like)
+    )
+    return SpendBy(
+        borough=_slug(borough),
+        period_from=period_from,
+        period_to=period_to,
+        group_by=group_by,
+        rows=[GroupRow(key=r["key"], total_gbp=float(r["total"]), payments=r["n"]) for r in rows],
+        matched=matched,
+    )
+
+
+PAYMENT_COLUMNS = (
+    "borough, payment_date, supplier, directorate, department, purpose, amount_gbp, reference"
+)
+
+
+class Payment(BaseModel):
+    borough: str
+    payment_date: date
+    supplier: str
+    directorate: str | None
+    department: str | None
+    purpose: str | None
+    amount_gbp: float
+    reference: str | None
+
+
+class Payments(BaseModel):
+    """A filtered set of payments: the total and count over the whole set, and at most ROW_LIMIT rows."""
+
+    total_gbp: float
+    payments: int
+    rows: list[Payment]
+
+
+class SupplierPayments(BaseModel):
+    supplier_like: str
+    boroughs: list[str]
+    total_gbp: float
+    payments: int
+    first_date: date | None
+    last_date: date | None
+    rows: list[Payment]
+
+
+class ComparisonRow(BaseModel):
+    borough: str
+    total_gbp: float
+    payments: int
+    population: int | None
+    gbp_per_resident: float | None
+
+
+class BoroughComparison(BaseModel):
+    period_from: date
+    period_to: date
+    rows: list[ComparisonRow]
+    matched: Matched
+
+
+def _payment(r: dict[str, Any]) -> Payment:
+    return Payment(
+        borough=r["borough"],
+        payment_date=r["payment_date"],
+        supplier=r["supplier"],
+        directorate=r["directorate"],
+        department=r["department"],
+        purpose=r["purpose"],
+        amount_gbp=float(r["amount_gbp"]),
+        reference=r["reference"],
+    )
+
+
+async def _payment_set(db: Database, where: str, params: dict[str, Any], *, order: str, limit: int) -> Payments:
+    totals = await db.fetch_all(
+        f"SELECT coalesce(sum(amount_gbp), 0) AS total, count(*) AS n FROM payments WHERE {where}",
+        params,
+    )
+    rows = await db.fetch_all(
+        f"SELECT {PAYMENT_COLUMNS} FROM payments WHERE {where} ORDER BY {order} LIMIT {_clamp(limit)}",
+        params,
+    )
+    return Payments(
+        total_gbp=float(totals[0]["total"]),
+        payments=totals[0]["n"],
+        rows=[_payment(r) for r in rows],
+    )
+
+
+async def supplier_payments(
+    ctx: RunContext[Deps],
+    supplier_like: str,
+    period_from: date,
+    period_to: date,
+    borough: str | None = None,
+) -> SupplierPayments:
+    """Everything paid to suppliers whose name contains the given text, ignoring case and punctuation, between two dates: total, count, first and last payment date, which boroughs paid them, and the payments. Leave borough empty to search every borough."""
+    where, params = _filters(
+        period_from=period_from, period_to=period_to, borough=borough, supplier_like=supplier_like
+    )
+    summary = await ctx.deps.db.fetch_all(
+        "SELECT coalesce(sum(amount_gbp), 0) AS total, count(*) AS n,"
+        " min(payment_date) AS first_date, max(payment_date) AS last_date,"
+        " array_remove(array_agg(DISTINCT borough), NULL) AS boroughs"
+        f" FROM payments WHERE {where}",
+        params,
+    )
+    rows = await ctx.deps.db.fetch_all(
+        f"SELECT {PAYMENT_COLUMNS} FROM payments WHERE {where}"
+        f" ORDER BY payment_date DESC, amount_gbp DESC LIMIT {ROW_LIMIT}",
+        params,
+    )
+    s = summary[0]
+    return SupplierPayments(
+        supplier_like=supplier_like,
+        boroughs=sorted(s["boroughs"] or []),
+        total_gbp=float(s["total"]),
+        payments=s["n"],
+        first_date=s["first_date"],
+        last_date=s["last_date"],
+        rows=[_payment(r) for r in rows],
+    )
+
+
+async def largest_payments(
+    ctx: RunContext[Deps],
+    period_from: date,
+    period_to: date,
+    borough: str | None = None,
+    limit: int = 20,
+    min_amount: float | None = None,
+    department_like: str | None = None,
+    purpose_like: str | None = None,
+) -> Payments:
+    """The biggest single payments between two dates, largest first, in one borough or across all of them. Narrow with a minimum amount or a substring of the department or purpose."""
+    where, params = _filters(
+        period_from=period_from,
+        period_to=period_to,
+        borough=borough,
+        min_amount=min_amount,
+        department_like=department_like,
+        purpose_like=purpose_like,
+    )
+    return await _payment_set(
+        ctx.deps.db, where, params, order="amount_gbp DESC, payment_date DESC", limit=limit
+    )
+
+
+async def search_payments(
+    ctx: RunContext[Deps],
+    text: str,
+    period_from: date,
+    period_to: date,
+    borough: str | None = None,
+    min_amount: float | None = None,
+    limit: int = 50,
+) -> Payments:
+    """Payments whose supplier, purpose or department contains the given text, between two dates. Use it for "show me the payments for" questions about a topic such as parks, roads, libraries or consultants."""
+    where, params = _filters(
+        period_from=period_from, period_to=period_to, borough=borough, min_amount=min_amount, text=text
+    )
+    return await _payment_set(
+        ctx.deps.db, where, params, order="payment_date DESC, amount_gbp DESC", limit=limit
+    )
+
+
+async def compare_boroughs(
+    ctx: RunContext[Deps],
+    boroughs: list[str],
+    period_from: date,
+    period_to: date,
+    department_like: str | None = None,
+    purpose_like: str | None = None,
+) -> BoroughComparison:
+    """Total spend of several boroughs over the same period side by side, with spend per resident where the population is known. Narrow with a substring of the department or purpose to compare one kind of spend."""
+    where, params = _filters(
+        period_from=period_from,
+        period_to=period_to,
+        boroughs=boroughs,
+        department_like=department_like,
+        purpose_like=purpose_like,
+    )
+    # The borough comes from the asked-for slug, not from `boroughs`, so a
+    # borough with no row there still comes back, with a NULL population.
+    rows = await ctx.deps.db.fetch_all(
+        "SELECT asked.slug AS borough, b.population,"
+        " coalesce(sum(p.amount_gbp), 0) AS total, count(p.id) AS n"
+        " FROM unnest(%(boroughs)s::text[]) AS asked(slug)"
+        " LEFT JOIN boroughs b ON b.slug = asked.slug"
+        f" LEFT JOIN payments p ON p.borough = asked.slug AND {where}"
+        " GROUP BY asked.slug, b.population ORDER BY total DESC",
+        params,
+    )
+    matched = await _matched(
+        ctx.deps.db, where, params, department=bool(department_like), purpose=bool(purpose_like)
+    )
+    out: list[ComparisonRow] = []
+    for r in rows:
+        total = float(r["total"])
+        population = r["population"]
+        out.append(
+            ComparisonRow(
+                borough=r["borough"] or "",
+                total_gbp=total,
+                payments=r["n"],
+                population=population,
+                gbp_per_resident=(total / population) if population else None,
+            )
+        )
+    return BoroughComparison(period_from=period_from, period_to=period_to, rows=out, matched=matched)
+
+
+ALL_TOOLS = [
+    coverage,
+    spend_total,
+    spend_by,
+    supplier_payments,
+    largest_payments,
+    search_payments,
+    compare_boroughs,
+]
