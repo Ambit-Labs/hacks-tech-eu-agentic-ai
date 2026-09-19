@@ -34,6 +34,21 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 
 ## Deploy on Vercel
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+This directory is its own Vercel project. Set Root Directory to `web` in the
+project settings; the agent is a second project with Root Directory `agent`.
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Variables to set on the project:
+
+| Name | Required | Value, or where it comes from |
+| --- | --- | --- |
+| `AGENT_URL` | yes | the agent project's URL, `https://<agent-project>.vercel.app`, no trailing slash |
+| `NEXT_PUBLIC_CHAT_BACKEND` | no | `ai-sdk` to post to the TypeScript route instead of the agent |
+| `GOOGLE_AI_STUDIO_KEY` | only with `ai-sdk` | Gemini API key, the same one `web/.env.local` holds |
+
+`next.config.ts` reads `AGENT_URL` while the config is evaluated, which happens
+at build time, so it has to be set before the build and a change to it needs a
+redeploy, not just a restart. `NEXT_PUBLIC_CHAT_BACKEND` is inlined into the
+client bundle for the same reason.
+
+Because the browser reaches the agent through the `/api/agent/:path*` rewrite,
+both deployments stay on one origin and there is still no CORS to configure.

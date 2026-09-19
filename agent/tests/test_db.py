@@ -1,7 +1,29 @@
+import sys
+import types
+
 import psycopg
 import pytest
 
-from db import Database, with_endpoint
+from db import Database, resolve_from_modal, with_endpoint
+
+
+def test_resolve_from_modal_names_the_token_vars(monkeypatch):
+    # Modal raises from inside its own client when the token is missing, which
+    # is what a Vercel function without MODAL_TOKEN_ID looks like.
+    stub = types.ModuleType("modal")
+
+    class Dict:
+        @staticmethod
+        def from_name(name):
+            raise RuntimeError("token missing")
+
+    stub.Dict = Dict
+    monkeypatch.setitem(sys.modules, "modal", stub)
+
+    with pytest.raises(RuntimeError) as caught:
+        resolve_from_modal("postgresql://agent:p@old-host:1111/postgres")
+    assert "MODAL_TOKEN_ID" in str(caught.value)
+    assert "MODAL_TOKEN_SECRET" in str(caught.value)
 
 
 def test_with_endpoint_keeps_credentials_and_database():

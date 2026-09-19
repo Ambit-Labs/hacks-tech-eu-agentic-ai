@@ -84,6 +84,41 @@ With `LOGFIRE_TOKEN` set, each request is one trace in Logfire: the HTTP
 span, the agent run, every model and tool call with full content, and every
 SQL statement. Environment is `AGENT_ENV`.
 
+## Deploy to Vercel
+
+This directory is its own Vercel project. Set Root Directory to `agent` in the
+project settings; the web app is a second project with Root Directory `web`.
+The Python runtime finds the FastAPI instance through
+`[tool.vercel] entrypoint = "main:app"` in `pyproject.toml`, installs from
+`[project] dependencies` with `uv.lock` honoured, and takes the Python version
+from `.python-version`.
+
+Variables to set on the project:
+
+| Name | Required | Value, or where it comes from |
+| --- | --- | --- |
+| `PYDANTIC_AI_GATEWAY_API_KEY` | yes | the gateway key, same one as in `.env.local` |
+| `PYDANTIC_AI_GATEWAY_BASE_URL` | no | `https://gateway-eu.pydantic.dev/proxy` |
+| `AGENT_MODEL` | no | default `gateway/google-cloud:gemini-3.6-flash` |
+| `DATABASE_URL` | yes | the `agent` login against the Modal Postgres, the `MODAL_DATABASE_URL` line in `.env.local` |
+| `MODAL_TOKEN_ID` | yes | a Modal token for the `ambit-labs` workspace |
+| `MODAL_TOKEN_SECRET` | yes | the secret half of that token |
+| `LOGFIRE_TOKEN` | no, but wanted | Logfire write token for `hacks-eu-agentic` |
+| `AGENT_ENV` | no | set `production`, so deployed traces separate from laptop ones |
+
+The Modal token is what lets the agent re-read the database address after the
+Postgres container moves. Without it the first query after a move fails with a
+`RuntimeError` naming both variables, and every query after that fails the same
+way until the token is set.
+
+`vercel.json` gives the function 120 seconds and pins it to `lhr1`, next to the
+London data and the EU gateway. After a deploy, `GET /health` is the check: it
+returns the model string and whether the pool was built.
+
+Nothing in the agent is known to break on Vercel. The one difference is that
+the coverage summary is cached per function instance, so the first request
+after a cold start spends about a second re-reading it.
+
 ## Tests
 
 ```bash

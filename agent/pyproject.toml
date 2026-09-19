@@ -13,6 +13,11 @@ dependencies = [
     "uvicorn>=0.53.0",
 ]
 
+[tool.vercel]
+# Vercel's Python runtime would find `app` in main.py anyway; naming it here
+# keeps the entrypoint from moving by accident.
+entrypoint = "main:app"
+
 [dependency-groups]
 dev = [
     "httpx>=0.28",

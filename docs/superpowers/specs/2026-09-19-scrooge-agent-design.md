@@ -30,10 +30,12 @@ stream, including tool calls as cards. That wiring stays as it is.
    user, password and database from `DATABASE_URL`, reopen the pool, retry
    once.
 5. **Model.** The model string lives in `AGENT_MODEL`, default
-   `google:gemini-3.8-flash` with the key from `GOOGLE_AI_STUDIO_KEY`. The
-   Pydantic AI Gateway only routes Google through Vertex today, so the gateway
-   is a later config change to `gateway/google-cloud:<model>` once Vertex or a
-   custom provider credential exists.
+   `gateway/google-cloud:gemini-3.6-flash`: the Pydantic AI Gateway's Vertex
+   route, the only Google route the gateway exposes, with
+   `PYDANTIC_AI_GATEWAY_API_KEY`. Decided 2026-09-19 after the owner asked for
+   Pydantic's own Vertex provider; the gateway key was set the same afternoon
+   and both `gemini-3.6-flash` and `gemini-3.8-flash` answer through it.
+   `google:<model>` with `GOOGLE_AI_STUDIO_KEY` stays as the fallback.
 6. **Logfire.** `logfire.configure(service_name="scrooge-agent",
    environment=AGENT_ENV)` with `send_to_logfire="if-token-present"`, then
    `instrument_pydantic_ai(include_content=True)`, `instrument_fastapi(app)`,
@@ -73,10 +75,13 @@ agent/
 | Name | Where | Meaning |
 | --- | --- | --- |
 | `GOOGLE_AI_STUDIO_KEY` | agent | Gemini API key, required when `AGENT_MODEL` starts with `google:` |
-| `AGENT_MODEL` | agent | Pydantic AI model string, default `google:gemini-3.8-flash` |
+| `AGENT_MODEL` | agent | Pydantic AI model string, default `gateway/google-cloud:gemini-3.6-flash` |
 | `DATABASE_URL` | agent | `postgresql://agent:<password>@<host>:<port>/postgres` |
 | `LOGFIRE_TOKEN` | agent | Logfire write token; without it nothing is sent |
 | `AGENT_ENV` | agent | `dev` by default; the Logfire environment label |
 | `PYDANTIC_AI_GATEWAY_API_KEY` | agent | only when `AGENT_MODEL` starts with `gateway/` |
+| `PYDANTIC_AI_GATEWAY_BASE_URL` | agent | optional proxy root, `https://gateway-eu.pydantic.dev/proxy`; the key already carries the region |
+| `MODAL_TOKEN_ID` | agent | Modal token for the workspace running Postgres, so the agent can re-read the address after a move |
+| `MODAL_TOKEN_SECRET` | agent | the secret half of that token |
 | `AGENT_URL` | web | where the rewrite sends `/api/agent/*` |
 | `NEXT_PUBLIC_CHAT_BACKEND` | web | `ai-sdk` to use the TypeScript route instead |

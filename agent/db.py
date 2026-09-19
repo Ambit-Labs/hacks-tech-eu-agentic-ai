@@ -41,7 +41,16 @@ def resolve_from_modal(url: str) -> str:
     """Re-read host and port from the Dict the infra server publishes into."""
     import modal
 
-    record = modal.Dict.from_name(ENDPOINT_DICT_NAME).get(ENDPOINT_KEY)
+    try:
+        record = modal.Dict.from_name(ENDPOINT_DICT_NAME).get(ENDPOINT_KEY)
+    except Exception as exc:
+        # Modal reports a missing or wrong token from deep inside its client,
+        # and this is the first place that shows up on a server with no Modal
+        # credentials, such as a fresh Vercel function.
+        raise RuntimeError(
+            "could not read the Postgres endpoint from Modal. Set MODAL_TOKEN_ID "
+            "and MODAL_TOKEN_SECRET for the workspace that runs the database."
+        ) from exc
     if not isinstance(record, dict) or "host" not in record or "port" not in record:
         raise RuntimeError(
             "no Postgres endpoint is published in Modal. Run `uv run pg start` in infra/."
