@@ -100,10 +100,24 @@ def _slug(borough: str) -> str:
     return borough.strip().lower()
 
 
+def _escape(value: str) -> str:
+    """`value` with the LIKE wildcards turned into literals."""
+    return value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+
+
 def _like(value: str) -> str:
     """A LIKE pattern that matches `value` as a substring, wildcards escaped."""
-    escaped = value.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
-    return f"%{escaped}%"
+    return f"%{_escape(value)}%"
+
+
+def _word_like(value: str) -> str:
+    """A LIKE pattern that matches `value` as whole words, wildcards escaped.
+
+    It compares against a supplier_norm padded with a space either side, so the
+    space before and after the pattern is a word boundary: "CAPITA" matches
+    "CAPITA BUSINESS SERVICES" and not "CAPITAL WORKS LTD".
+    """
+    return f"% {_escape(value)} %"
 
 
 def _norm(value: str) -> str:
@@ -155,12 +169,17 @@ def _filters(
         params["purpose_like"] = _like(purpose_like)
     if supplier_like is not None:
         # _norm drops every non-alphanumeric run, so punctuation on its own
-        # would leave the pattern '%%', which matches every payment ever made.
+        # would leave a pattern that matches every payment ever made.
         normalised = _norm(supplier_like)
         if not normalised:
             raise ModelRetry("supplier_like needs at least one letter or digit")
-        clauses.append("supplier_norm LIKE %(supplier_like)s")
-        params["supplier_like"] = _like(normalised)
+        # Whole words, not any substring: a substring match on "capita" drags
+        # in every CAPITAL, which is thousands of payments by other suppliers.
+        # supplier_norm collapses punctuation to single spaces, so padding it
+        # makes a space either side of the pattern a word boundary. The name
+        # still matches anywhere inside the supplier and over several words.
+        clauses.append("(' ' || supplier_norm || ' ') LIKE %(supplier_like)s")
+        params["supplier_like"] = _word_like(normalised)
     if min_amount is not None:
         clauses.append("amount_gbp >= %(min_amount)s")
         params["min_amount"] = min_amount
@@ -319,6 +338,9 @@ class Payments(BaseModel):
 class SupplierPayments(BaseModel):
     supplier_like: str
     boroughs: list[str]
+    # Every borough that paid the supplier, biggest payer first, so one call
+    # answers "which boroughs and how much each".
+    by_borough: list[GroupRow]
     total_gbp: float
     payments: int
     first_date: date | None
@@ -377,7 +399,7 @@ async def supplier_payments(
     period_to: date,
     borough: str | None = None,
 ) -> SupplierPayments:
-    """Everything paid to suppliers whose name contains the given text, ignoring case and punctuation, between two dates: total, count, first and last payment date, which boroughs paid them, and the payments. Leave borough empty to search every borough."""
+    """Everything paid to suppliers whose name contains the given words, ignoring case and punctuation, between two dates: the total, the count, the first and last payment date, the total per borough biggest first, and the payments. The name matches whole words, so "capita" finds CAPITA BUSINESS SERVICES and not CAPITAL WORKS LTD. One call covers every borough: leave borough empty and read by_borough, rather than calling this once per borough or once per year."""
     where, params = _filters(
         period_from=period_from, period_to=period_to, borough=borough, supplier_like=supplier_like
     )
@@ -386,6 +408,11 @@ async def supplier_payments(
         " min(payment_date) AS first_date, max(payment_date) AS last_date,"
         " array_remove(array_agg(DISTINCT borough), NULL) AS boroughs"
         f" FROM payments WHERE {where}",
+        params,
+    )
+    by_borough = await ctx.deps.db.fetch_all(
+        "SELECT borough AS key, sum(amount_gbp) AS total, count(*) AS n"
+        f" FROM payments WHERE {where} GROUP BY borough ORDER BY total DESC, key",
         params,
     )
     rows = await ctx.deps.db.fetch_all(
@@ -397,6 +424,9 @@ async def supplier_payments(
     return SupplierPayments(
         supplier_like=supplier_like,
         boroughs=sorted(s["boroughs"] or []),
+        by_borough=[
+            GroupRow(key=r["key"], total_gbp=float(r["total"]), payments=r["n"]) for r in by_borough
+        ],
         total_gbp=float(s["total"]),
         payments=s["n"],
         first_date=s["first_date"],

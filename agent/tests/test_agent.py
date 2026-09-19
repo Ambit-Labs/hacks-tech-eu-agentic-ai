@@ -1,7 +1,7 @@
 import time
 
 import pytest
-from pydantic_ai.exceptions import UserError
+from pydantic_ai.exceptions import UsageLimitExceeded, UserError
 from pydantic_ai.messages import (
     ModelMessage,
     ModelRequest,
@@ -13,7 +13,7 @@ from pydantic_ai.messages import (
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 from pydantic_ai.models.test import TestModel
 
-from agent import COVERAGE_TTL_SECONDS, build_agent, build_model
+from agent import COVERAGE_TTL_SECONDS, REQUEST_LIMIT, USAGE_LIMITS, build_agent, build_model
 from config import Settings
 from db import Database
 from tools import Deps
@@ -113,6 +113,23 @@ async def test_tool_call_reaches_the_database(deps):
     assert len(returns) == 1
     assert returns[0].content.total_gbp == 10000.0
     assert returns[0].content.payments == 6
+
+
+async def test_a_looping_model_stops_at_the_request_limit(deps):
+    # USAGE_LIMITS is what main.py hands the adapter, so this is the cap a
+    # question really runs under, not a number invented for the test.
+    requests = 0
+
+    def model_fn(messages: list[ModelMessage], info: AgentInfo) -> ModelResponse:
+        nonlocal requests
+        requests += 1
+        return ModelResponse(parts=[ToolCallPart("coverage", {})])
+
+    agent = build_agent(FunctionModel(model_fn))
+    with pytest.raises(UsageLimitExceeded) as caught:
+        await agent.run("how much to capita?", deps=deps, usage_limits=USAGE_LIMITS)
+    assert f"request_limit of {REQUEST_LIMIT}" in str(caught.value)
+    assert requests == REQUEST_LIMIT
 
 
 async def test_every_tool_is_registered(deps):

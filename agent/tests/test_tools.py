@@ -123,9 +123,33 @@ async def test_supplier_payments_matches_across_case_and_suffix(ctx):
     assert result.total_gbp == 8000.0
     assert result.payments == 4
     assert result.boroughs == ["camden", "islington"]
+    assert [(r.key, r.total_gbp, r.payments) for r in result.by_borough] == [
+        ("camden", 5000.0, 2),
+        ("islington", 3000.0, 2),
+    ]
     assert result.first_date == date(2019, 9, 3)
     assert result.last_date == date(2019, 10, 11)
     assert len(result.rows) == 4
+
+
+async def test_supplier_payments_matches_whole_words_only(ctx):
+    # The bug behind #10: a substring match on "capita" also caught every
+    # CAPITAL, and the model spent 91 tool calls trying to explain the noise.
+    inserted = await ctx.deps.db.fetch_all(
+        "INSERT INTO payments (borough, payment_date, financial_year, supplier, purpose,"
+        " amount_gbp, source_file, source_row, raw)"
+        " VALUES ('camden', '2019-10-30', '2019/20', 'CAPITAL WORKS LTD', 'Works - Construction',"
+        " 999.00, 'data/raw/camden/2019-10__camden-payments.csv', 99, '{}') RETURNING id"
+    )
+    try:
+        result = await supplier_payments(ctx, "capita", date(2019, 9, 1), date(2019, 10, 31))
+        assert result.payments == 4
+        assert result.total_gbp == 8000.0
+    finally:
+        # RETURNING because fetch_all always reads rows back.
+        await ctx.deps.db.fetch_all(
+            "DELETE FROM payments WHERE id = %(id)s RETURNING id", {"id": inserted[0]["id"]}
+        )
 
 
 async def test_supplier_payments_in_one_borough(ctx):

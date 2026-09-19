@@ -16,12 +16,15 @@ from collections.abc import AsyncIterator
 
 from fastapi import FastAPI
 from fastapi.responses import JSONResponse
-from pydantic_ai.ui.vercel_ai import VercelAIAdapter
+from pydantic_ai.exceptions import UsageLimitExceeded
+from pydantic_ai.ui import UIEventStream
+from pydantic_ai.ui.vercel_ai import VercelAIAdapter, VercelAIEventStream
+from pydantic_ai.ui.vercel_ai.response_types import BaseChunk
 from starlette.requests import Request
 from starlette.responses import Response
 
 import observability
-from agent import build_agent, build_model
+from agent import REQUEST_LIMIT, USAGE_LIMITS, build_agent, build_model
 from config import DATABASE_URL_ENV, Settings
 from db import Database
 from tools import Deps
@@ -29,6 +32,35 @@ from tools import Deps
 # The web app runs AI SDK 7. The adapter's v7 wire is identical to v6's today,
 # but passing the client's real major keeps both ends on the same value.
 SDK_VERSION = 7
+
+# What the reader sees when a run hits REQUEST_LIMIT. The library's own text
+# quotes `request_limit` and links its docs, which tells a reader nothing.
+LIMIT_MESSAGE = (
+    f"I stopped after {REQUEST_LIMIT} steps without reaching an answer. That usually means the"
+    " question needs narrowing: name the borough, the period or the supplier and ask again."
+)
+
+
+class ScroogeEventStream(VercelAIEventStream):
+    """The Vercel event stream, with our own words for the request limit."""
+
+    async def on_error(self, error: Exception) -> AsyncIterator[BaseChunk]:
+        if isinstance(error, UsageLimitExceeded):
+            error = RuntimeError(LIMIT_MESSAGE)
+        async for chunk in super().on_error(error):
+            yield chunk
+
+
+class ScroogeAdapter(VercelAIAdapter[Deps, str]):
+    """The Vercel adapter, streaming through ScroogeEventStream."""
+
+    def build_event_stream(self) -> UIEventStream:
+        return ScroogeEventStream(
+            self.run_input,
+            accept=self.accept,
+            sdk_version=self.sdk_version,
+            server_message_id=self.server_message_id,
+        )
 
 
 @asynccontextmanager
@@ -66,11 +98,12 @@ async def chat(request: Request) -> Response:
         return _error(
             f"The server is missing {DATABASE_URL_ENV}. Add it to .env.local and restart the agent."
         )
-    return await VercelAIAdapter.dispatch_request(
+    return await ScroogeAdapter.dispatch_request(
         request,
         agent=request.app.state.agent,
         deps=deps,
         sdk_version=SDK_VERSION,
+        usage_limits=USAGE_LIMITS,
     )
 
 

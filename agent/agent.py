@@ -15,6 +15,7 @@ from pydantic_ai import Agent, RunContext
 from pydantic_ai.models import Model, infer_model
 from pydantic_ai.models.google import GoogleModel
 from pydantic_ai.providers.google import GoogleProvider
+from pydantic_ai.usage import UsageLimits
 
 from config import GOOGLE_KEY_ENV, Settings
 from tools import ALL_TOOLS, Deps
@@ -24,6 +25,13 @@ GOOGLE_PREFIX = "google:"
 # How long the coverage summary stays good. A load adds months, and the next
 # question five minutes later sees them.
 COVERAGE_TTL_SECONDS = 300
+
+# How many model requests one question gets. A question needs one to four tool
+# calls; past that the model is looping over the same tool rather than
+# answering, and Pydantic AI's own default of 50 lets it loop for five minutes
+# before the user hears anything. Every caller passes USAGE_LIMITS.
+REQUEST_LIMIT = 12
+USAGE_LIMITS = UsageLimits(request_limit=REQUEST_LIMIT)
 
 INSTRUCTIONS = """\
 You are Scrooge, an assistant that answers questions about what London
@@ -37,11 +45,18 @@ it matched, because every borough labels these differently. When the data
 does not cover the borough or period asked, say so and answer for the closest
 period that is loaded.
 
+A question about one supplier goes to supplier_payments. It matches whole
+words of the name, and one call covers every borough: it returns the total,
+the count, the first and last date, and the total each borough paid. Never
+call it once per borough or once per year. When a tool result is large,
+summarise what it already says instead of asking the same tool again.
+
 Borough names are lower-case slugs such as camden or tower-hamlets. Financial
 years run April to March. Amounts are pounds sterling, net of VAT where the
-borough says so. Write short markdown: a sentence or two, and a table when
-there are more than three numbers. Do not repeat the raw rows; the reader
-sees them in the tool result.
+borough says so. The interface draws every tool result beside your answer, as
+a chart or a table, so write the takeaway in a sentence or two of plain
+markdown: what the figure is, and what stands out about it. Do not write
+tables and do not list the rows.
 """
 
 
