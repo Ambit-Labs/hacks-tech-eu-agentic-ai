@@ -1,0 +1,1571 @@
+[
+  {
+    "borough": "Barking and Dagenham",
+    "gss_code": "E09000002",
+    "landing_page": "https://www.lbbd.gov.uk/council-and-democracy/performance-and-spending/corporate-procurement/payments-over-ps250-and-ps500",
+    "verified_live": false,
+    "open_data_portal": null,
+    "api": null,
+    "dataset_id": null,
+    "example_api_request": null,
+    "format": "CSV, XLSX and PDF (per council page text surfaced in search results; not fetched directly)",
+    "frequency": "Quarterly from January 2026; monthly before that",
+    "threshold": "£500 (over £250 also published since July 2012)",
+    "earliest_period": "December 2010 (per council page text; unverified)",
+    "latest_period": "April-June 2026 quarter (per council page text; unverified)",
+    "url_pattern": "Drupal static files: https://lbbd.gov.uk/sites/default/files/<YYYY-MM>/<free-text name>.csv|.pdf|.xlsx",
+    "example_file_urls": [
+      "https://lbbd.gov.uk/sites/default/files/2026-02/Corrected%20January%2025%20Transparency%20Report%20(CSV)%20Publishing%20Copy.xlsx.csv",
+      "https://lbbd.gov.uk/sites/default/files/2026-02/July%202025%20Transparency%20Report%20(PDF)%20Publishing%20Copy.pdf"
+    ],
+    "urls_predictable": false,
+    "url_discovery": "Must scrape the landing page. Filenames are free text and include spaces, brackets and a double extension (.xlsx.csv).",
+    "sample_columns": null,
+    "obstacles": "Hard block. Every lbbd.gov.uk URL (landing page, site root, and direct /sites/default/files/ downloads) returned HTTP 403 from nginx for both WebFetch and curl with a browser User-Agent. Not a Cloudflare challenge, a flat edge deny; looks like datacentre-IP or non-UK filtering. Needs a UK residential/proxy egress or a real browser session. File URLs above come from the search index, not from a fetch I made.",
+    "contracts_register": null,
+    "purchase_card": null,
+    "grants": null,
+    "other_links": {
+      "data_transparency_hub": "https://www.lbbd.gov.uk/council-and-democracy/transparency-and-information-requests/data-transparency"
+    },
+    "difficulty": "hard",
+    "notes": "Two retries with different headers, both 403. Recorded and moved on. Everything here except the block itself is second-hand from search snippets and must be re-checked from a permitted IP."
+  },
+  {
+    "borough": "Barnet",
+    "gss_code": "E09000003",
+    "landing_page": "https://open.barnet.gov.uk/dataset/expenditure-reporting-202627-2ywz8",
+    "verified_live": true,
+    "open_data_portal": "DataPress (open.barnet.gov.uk), CKAN-compatible action API",
+    "api": "https://open.barnet.gov.uk/api/action/package_show?id=2ywz8",
+    "dataset_id": "2ywz8 (current FY). Prior years are separate datasets: e6p4n 2025/26, 2rx6m 2024/25, 2331d 2023/24, e690n 2022/23, 2opln 2021/22, 2z8zk 2020/21, exole 2019/20, emjme 2018/19, 2lgxv 2017/18, vq87v 2016/17, 2o6n2 2015/16, em7ge 2014/15, 20q1e 2013/14",
+    "example_api_request": "curl 'https://open.barnet.gov.uk/api/action/package_show?id=2ywz8'  # resources[].url gives the CSV links",
+    "format": "CSV (cp1252/Windows-1252 encoded, not UTF-8: the £ sign arrives as 0xA3)",
+    "frequency": "Monthly, in arrears",
+    "threshold": "None. Barnet states it publishes all council expenditure down to the smallest payment, beyond the Transparency Code minimum. Payments to individuals (foster carers, adult and children's carers) are excluded.",
+    "earliest_period": "FY 2013/14 (dataset 20q1e)",
+    "latest_period": "July 2026",
+    "url_pattern": "https://open.barnet.gov.uk/download/<dataset_id>/<3-char random key>/<filename>.csv",
+    "example_file_urls": [
+      "https://open.barnet.gov.uk/download/2ywz8/f1f/Expenditure%20Report%20July%202026.csv",
+      "https://open.barnet.gov.uk/download/2ywz8/72m/Expenditure%20Report%20June%202026.csv"
+    ],
+    "urls_predictable": false,
+    "url_discovery": "The 3-character key is opaque, so always read resources[].url from package_show. The rest is stable.",
+    "sample_columns": [
+      "Cost Centre Hierarchy - Directorate",
+      "Cost Centre Hierarchy - Department",
+      "Payment Reference Number",
+      "Expenditure Type",
+      "Payment Number",
+      "Supplier Name",
+      " Distribution Amount ",
+      "Payment Date"
+    ],
+    "obstacles": "package_search ignores relevance and returns results ordered by metadata_modified, so keyword search is useless. Enumerate with rows=1000 and filter titles client-side. Amounts are quoted strings with thousands separators and a currency prefix. Date format is dd-Mon-yyyy.",
+    "contracts_register": "https://open.barnet.gov.uk/dataset/2exl0p (Barnet Contracts Register 2023-24, id exl0p, last modified 2023-12-19, stale); older: 24qyn 2020-2023",
+    "purchase_card": "https://open.barnet.gov.uk/api/action/package_show?id=ep8y2 (Corporate Credit Card Transactions, modified 2026-07-03)",
+    "grants": "https://open.barnet.gov.uk/api/action/package_show?id=2k1zj (Grants to voluntary, community and social enterprise organisations 2022-23, stale)",
+    "other_links": {
+      "data_gov_uk_entry": "https://www.data.gov.uk/dataset/6a7aea92-8b4f-4bd2-bc09-f82bdf581f4a/payments-to-suppliers-with-a-value-over-500-from-the-london-borough-of-barnet (dead: its only resource is a 2010 XLS on the National Archives web archive; ignore it)"
+    },
+    "difficulty": "easy",
+    "notes": "Best-in-class of this set after Camden. The contracts register dataset id exl0p resolves via the API; I verified the API and the CSV download, not the pretty dataset page for exl0p."
+  },
+  {
+    "borough": "Bexley",
+    "gss_code": "E09000004",
+    "landing_page": "https://www.bexley.gov.uk/bexley-business-employment/business-services/contracts-tenders-and-procurement/expenditure-records",
+    "verified_live": true,
+    "open_data_portal": null,
+    "api": null,
+    "dataset_id": null,
+    "example_api_request": null,
+    "format": "CSV",
+    "frequency": "Monthly",
+    "threshold": "£500, net of VAT",
+    "earliest_period": "November 2010 (early years are half-yearly or annual files)",
+    "latest_period": "July 2026 (expenditure); August 2026 (procurement card)",
+    "url_pattern": "https://www.bexley.gov.uk/sites/default/files/<YYYY-MM>/<inconsistent name>.csv",
+    "example_file_urls": [
+      "https://www.bexley.gov.uk/sites/default/files/2026-08/july-2026.csv",
+      "https://www.bexley.gov.uk/sites/default/files/2026-08/expenditure-june-2026.csv",
+      "https://www.bexley.gov.uk/sites/default/files/2026-09/pcard-expenditure-august-2026.csv"
+    ],
+    "urls_predictable": false,
+    "url_discovery": "Scrape the landing page. Filenames have no consistent convention: july-2026.csv, expenditure-june-2026.csv, may-2026-spend-report.csv, Aug_2025_v1.csv all appear. The YYYY-MM folder is the upload month, not the data month. 143 CSV links on one page.",
+    "sample_columns": [
+      "Payment Date",
+      "Transaction Number",
+      "Non Recoverable VAT",
+      "Amount",
+      "Supplier",
+      "Supplier Number",
+      "Expense Type",
+      "Directorate",
+      "Service Area"
+    ],
+    "obstacles": "Row 1 is a title banner ('July 2026 £500 Spend Report,,,,,,,,,') and must be skipped; the header is row 2. Trailing empty column. £ sign is cp1252-encoded. Minus signs are supplier credit notes.",
+    "contracts_register": "https://www.bexley.gov.uk/bexley-business-employment/business-services/contracts-tenders-and-procurement",
+    "purchase_card": "Same landing page, separate monthly 'pcard' CSVs; latest August 2026",
+    "grants": "https://www.bexley.gov.uk/bexley-business-employment/business-support/external-funding-and-grants-businesses (business funding signposting, not a structured grants-paid dataset)",
+    "other_links": {
+      "alt_landing_page": "https://www.bexley.gov.uk/services/procurement/publication-payments-over-ps500"
+    },
+    "difficulty": "easy",
+    "notes": "Single scrape of one page gets 16 years of history. Published under OGL."
+  },
+  {
+    "borough": "Brent",
+    "gss_code": "E09000005",
+    "landing_page": "https://data.brent.gov.uk/dataset/what-we-spend-vq756",
+    "verified_live": true,
+    "open_data_portal": "DataPress (data.brent.gov.uk), CKAN-compatible action API",
+    "api": "https://data.brent.gov.uk/api/action/package_show?id=vq756",
+    "dataset_id": "vq756",
+    "example_api_request": "curl 'https://data.brent.gov.uk/api/action/package_show?id=vq756' | jq -r '.result.resources[].url'",
+    "format": "CSV",
+    "frequency": "Quarterly, by the middle of the month after quarter end",
+    "threshold": "£500",
+    "earliest_period": "March-May 2020 quarter (25 resources on the dataset). The dataset description says only the current plus two prior financial years are kept, but older files are still attached.",
+    "latest_period": "April-June 2026 quarter",
+    "url_pattern": "https://data.brent.gov.uk/download/vq756/<3-char random key>/<filename>.csv",
+    "example_file_urls": [
+      "https://data.brent.gov.uk/download/vq756/r9z/Transparency%20Report%20Apr%202026%20-%20Jun%202026.csv",
+      "https://data.brent.gov.uk/download/vq756/3gl/Transparency%20Report%20Jan%202026%20-%20Mar%202026.csv"
+    ],
+    "urls_predictable": false,
+    "url_discovery": "Read resources[].url from package_show; the 3-char key is opaque and the filename casing varies between years.",
+    "sample_columns": [
+      "Payment Date",
+      "Vendor Name 2",
+      "Cost Centre Code",
+      "Cost Centre Description",
+      "Subjective Code",
+      "Subjective desctiption",
+      " Amount ",
+      "Non Recoverable VAT"
+    ],
+    "obstacles": "Row 1 is a title banner ('Transparency Report 26 Apr - 26 Jun,,,,,,,'); header is row 2. Column name 'Subjective desctiption' is misspelled in the source. Amounts are quoted with thousands separators. Personal data appears as 'REDACTED PERSONAL DATA'. Same DataPress search-relevance problem as Barnet: enumerate with rows=1000.",
+    "contracts_register": "https://data.brent.gov.uk/api/action/package_show?id=29d41 (Contracts and tenders, last modified 2022-01-17, stale)",
+    "purchase_card": "https://data.brent.gov.uk/api/action/package_show?id=2w8pz (Government Procurement Card Transactions, quarterly CSV, latest Jun-Aug 2026)",
+    "grants": "https://data.brent.gov.uk/api/action/package_show?id=2opqw (Grants to voluntary and community groups, last modified 2022-02-14, stale)",
+    "other_links": {
+      "transparency_code_index": "https://data.brent.gov.uk/api/action/package_show?id=2zgzk"
+    },
+    "difficulty": "easy",
+    "notes": "Quarterly rather than monthly, so expect a lag of up to four months for the most recent payments."
+  },
+  {
+    "borough": "Bromley",
+    "gss_code": "E09000006",
+    "landing_page": "https://www.bromley.gov.uk/council-democracy/council-spending/2",
+    "verified_live": true,
+    "open_data_portal": null,
+    "api": null,
+    "dataset_id": null,
+    "example_api_request": null,
+    "format": "XLSX, despite the page saying CSV. The download served Content-Type application/vnd.openxmlformats-officedocument.spreadsheetml.sheet and Content-Disposition filename Payments_to_suppliers_over___500_August_2026.xlsx.",
+    "frequency": "Monthly",
+    "threshold": "£500, net of VAT",
+    "earliest_period": "April 2022",
+    "latest_period": "August 2026",
+    "url_pattern": "Two hops. Listing links are https://www.bromley.gov.uk/downloads/download/<catalogue_id>/payments-to-suppliers---<MMYY> ; that HTML page contains the real file link https://www.bromley.gov.uk/downloads/file/<file_id>/<slug>",
+    "example_file_urls": [
+      "https://www.bromley.gov.uk/downloads/download/746/payments-to-suppliers---0826",
+      "https://www.bromley.gov.uk/downloads/file/3993/payments-to-suppliers-invoices-over-500-august-2026"
+    ],
+    "urls_predictable": false,
+    "url_discovery": "The catalogue slug is predictable (payments-to-suppliers---MMYY) but the numeric ids are not, and neither is the second-hop file id or slug. Scrape the listing page (54 entries), then each download page.",
+    "sample_columns": [
+      "SERVICE_AREA",
+      "PORTFOLIO",
+      "SUBJ_DESCRIPTION",
+      "SUPPLIER_NAME_REDACTED",
+      "PAYMENT_NUMBER",
+      "PAYMENT_DATE",
+      "Net Amount",
+      "VENDOR_TYPE_LOOKUP_CODE"
+    ],
+    "obstacles": "Format mismatch with the published description (XLSX not CSV), so sniff the content type rather than trusting the extension. PAYMENT_DATE is an Excel serial number. Personal payees show as 'REDACTED PERSONAL DATA'. History only goes back to April 2022.",
+    "contracts_register": null,
+    "purchase_card": null,
+    "grants": null,
+    "other_links": {
+      "parent_page": "https://www.bromley.gov.uk/council-democracy/council-spending",
+      "data_gov_uk_entry": "https://www.data.gov.uk/dataset/478e6d68-59f1-471c-a6fa-970d78af2e89/local-authority-spending-over-500-bromley"
+    },
+    "difficulty": "medium",
+    "notes": "Two-hop scrape and a wrong stated format are the only real friction. I did not find a contracts register, purchase card or grants dataset on the council-spending pages I fetched; treat those as not-found rather than confirmed-absent."
+  },
+  {
+    "borough": "Camden",
+    "gss_code": "E09000007",
+    "landing_page": "https://opendata.camden.gov.uk/Finance/Camden-Council-Spend-Over-500-GBP/3ixw-qvb8",
+    "verified_live": true,
+    "open_data_portal": "Socrata (opendata.camden.gov.uk), full SoQL API",
+    "api": "https://opendata.camden.gov.uk/resource/3ixw-qvb8.json",
+    "dataset_id": "3ixw-qvb8 (full history). Convenience views: bxv2-59rb latest month, aff8-8cnt latest calendar year, d6sr-vkpp latest financial year.",
+    "example_api_request": "curl \"https://opendata.camden.gov.uk/resource/3ixw-qvb8.csv?\\$where=payment_date%20%3E=%20'2026-08-01'&\\$limit=50000\"  # also: ?$select=min(payment_date),max(payment_date),count(*)",
+    "format": "CSV, JSON, XML, XLSX, RDF via the Socrata resource endpoint; no file downloads needed",
+    "frequency": "Monthly (metadata updated 2026-09-14)",
+    "threshold": "£500",
+    "earliest_period": "2019-09-16 (verified via $select=min(payment_date))",
+    "latest_period": "2026-08-28 (verified). 416,000 rows total.",
+    "url_pattern": "https://opendata.camden.gov.uk/resource/3ixw-qvb8.<ext> with SoQL parameters. Stable, no scraping.",
+    "example_file_urls": [
+      "https://opendata.camden.gov.uk/resource/3ixw-qvb8.csv?$limit=1000&$order=payment_date%20DESC",
+      "https://opendata.camden.gov.uk/api/views/3ixw-qvb8/rows.csv?accessType=DOWNLOAD"
+    ],
+    "urls_predictable": true,
+    "url_discovery": "None needed. Paginate with $limit/$offset or filter with $where.",
+    "sample_columns": [
+      "organisation_label",
+      "organisation_uri",
+      "payment_date",
+      "payment_month",
+      "payment_year",
+      "financial_year",
+      "beneficiary_name",
+      "purpose",
+      "organisational_unit",
+      "amount_gbp",
+      "irrecoverable_vat_amount_gbp",
+      "latest_financial_year",
+      "latest_year",
+      "latest_month",
+      "unique_identifier"
+    ],
+    "obstacles": "History starts September 2019 only; anything earlier is not in this dataset. beneficiary_name is 'REDACTED' for payments to individuals (a large share of Children & Learning rows). Anonymous calls are throttled; register an app token for bulk pulls.",
+    "contracts_register": "https://opendata.camden.gov.uk/d/q52e-brxc (Camden Contracts Register, last updated 2024-09-09, stale); also mekw-8vgt Camden Procurement Contracts Register (2024-08-07)",
+    "purchase_card": "https://opendata.camden.gov.uk/d/dbzt-f47m (Camden Council Procurement Card Transactions, last updated 2024-09-18, stale)",
+    "grants": "https://opendata.camden.gov.uk/d/fqws-c3sc (Grants to Voluntary, Community and Social Enterprise Organisations, last updated 2025-06-18)",
+    "other_links": {
+      "catalog_api": "https://opendata.camden.gov.uk/api/catalog/v1?q=spend%20over&search_context=opendata.camden.gov.uk"
+    },
+    "difficulty": "easy",
+    "notes": "The reference implementation for this project. The spend dataset is current; the contracts register and purchase card datasets have not been refreshed since 2024."
+  },
+  {
+    "borough": "City of London Corporation",
+    "gss_code": "E09000001",
+    "landing_page": "https://www.cityoflondon.gov.uk/about-us/budgets-spending/local-authority-expenditure",
+    "verified_live": true,
+    "open_data_portal": null,
+    "api": null,
+    "dataset_id": null,
+    "example_api_request": null,
+    "format": "XLSX only. No CSV, no ODS.",
+    "frequency": "Monthly files, but uploaded in batches with a long lag. Page 'Date updated: 17/07/2026'; the March 2026 file carries 'Date submitted: 17/07/26'.",
+    "threshold": "£500, excluding VAT. Payments to staff excluded.",
+    "earliest_period": "April 2024. Only a rolling 24 months is retained on the page.",
+    "latest_period": "March 2026. Roughly six months stale as of 2026-09-19. I probed april/may/june-2026 under the current naming convention and all returned 404.",
+    "url_pattern": "Two conventions in use: https://www.cityoflondon.gov.uk/assets/about-us/local-authority-expenditure-over-500-<month>-<year>.xlsx (FY2025-26, some prefixed 'Copy-of-') and https://www.cityoflondon.gov.uk/assets/about-us/budget-and-spending/local-authority-expenditure-xlsx-<MM>-<YYYY>.xlsx (FY2024-25)",
+    "example_file_urls": [
+      "https://www.cityoflondon.gov.uk/assets/about-us/local-authority-expenditure-over-500-march-2026.xlsx",
+      "https://www.cityoflondon.gov.uk/assets/about-us/budget-and-spending/local-authority-expenditure-xlsx-04-2024.xlsx"
+    ],
+    "urls_predictable": false,
+    "url_discovery": "Scrape the landing page (24 links). The 'Copy-of-' prefix on seven 2025 files and the convention change between financial years make guessing unreliable.",
+    "sample_columns": [
+      "Body",
+      "Division of Service",
+      "Purpose of Expenditure",
+      "Merchant Category",
+      "Department",
+      "Payment Date",
+      "Transaction Code",
+      "Net Amount",
+      "Supplier Name"
+    ],
+    "obstacles": "Stale by about six months. Rolling 24-month window means history is lost unless you archive. XLSX only, so you need openpyxl or similar. Payment Date is an Excel serial. Redactions appear as 'REDACTED PERSONAL DATA' or 'Payment to Individual'. The page also warns that commercially sensitive rows may be withheld.",
+    "contracts_register": null,
+    "purchase_card": null,
+    "grants": null,
+    "other_links": {
+      "parent_page": "https://www.cityoflondon.gov.uk/about-us/budgets-spending",
+      "data_gov_uk_entry": "https://www.data.gov.uk/dataset/8186520e-6c90-4859-9542-e16b53808861/local-authority-spending-over-500-city-of-london"
+    },
+    "difficulty": "medium",
+    "notes": "Fetched and parsed the March 2026 XLSX directly; headers above are from row 1 of that file. The Corporation's non-local-authority (City's Cash, Bridge House Estates) spend is not in these files."
+  },
+  {
+    "borough": "Croydon",
+    "gss_code": "E09000008",
+    "landing_page": "https://www.croydon.gov.uk/council-and-elections/budgets-and-spending/accounts-and-payments/payments-over-ps500",
+    "verified_live": true,
+    "open_data_portal": null,
+    "api": null,
+    "dataset_id": null,
+    "example_api_request": null,
+    "format": "XLSX",
+    "frequency": "Monthly",
+    "threshold": "£500 (the file's own header block records 'Threshold Amount 500')",
+    "earliest_period": "January 2018. Year subpages /2018 through /2026 return 200; /2014 to /2017 return 404.",
+    "latest_period": "August 2026, published around 14 September 2026 (the file's 'reviewed by' cell reads 'Ian Geary, 14 sept 26')",
+    "url_pattern": "https://www.croydon.gov.uk/sites/default/files/<YYYY-MM upload folder>/<month>-<year>-payments-over-500.xlsx for recent years. Older years use a different naming, e.g. /sites/default/files/2022-04/January%202018.xlsx",
+    "example_file_urls": [
+      "https://www.croydon.gov.uk/sites/default/files/2026-09/august-2026-payments-over-500.xlsx",
+      "https://www.croydon.gov.uk/sites/default/files/2026-07/april-2026-payments-over-500.xlsx"
+    ],
+    "urls_predictable": false,
+    "url_discovery": "The filename is largely predictable but the YYYY-MM folder is the upload month and drifts (April 2026 sits under 2026-07). Scrape each year subpage: .../payments-over-ps500/<year>.",
+    "sample_columns": [
+      "Payment Date",
+      "Vendor Name",
+      "Vendor Type",
+      "Cost Centre Code",
+      "Cost Centre Description",
+      "Cost Centre Level 2 Code",
+      "Cost Centre Level 2 Description",
+      "Cost Centre Level 3 Code",
+      "Cost Centre Level 3 Description",
+      "Cost Centre Level 4 Code",
+      "Cost Centre Level 4 Description",
+      "Cost Centre Level 5 Code",
+      "... further cost-centre and account columns follow"
+    ],
+    "obstacles": "The XLSX opens with a four-row report preamble (prepared by / reviewed by / Business Unit / From Payment Date / Threshold Amount / Invoice Type / To Payment Date). The real header is row 5 and data starts row 6, so a naive read_excel gets garbage. Files are large (the August 2026 file is 1.2 MB).",
+    "contracts_register": "https://www.croydon.gov.uk/business-licences-and-tenders (link present on the spend page; I did not fetch it, so treat as unconfirmed)",
+    "purchase_card": "https://www.croydon.gov.uk/council-and-elections/budgets-and-spending/accounts-and-payments/procurement-card-transactions (quarterly XLSX, latest Jan-Mar 2026, e.g. /sites/default/files/2026-09/p-card-spend-jan-to-mar-26.xlsx)",
+    "grants": null,
+    "other_links": {
+      "accounts_and_payments_hub": "https://www.croydon.gov.uk/council-and-elections/budgets-and-spending/accounts-and-payments",
+      "prompt_payment": "https://www.croydon.gov.uk/council-and-elections/budgets-and-spending/accounts-and-payments/prompt-payment-performance",
+      "transparency_code_page": "https://www.croydon.gov.uk/council-and-elections/privacy-and-data-protection/dclg-transparency-code-information"
+    },
+    "difficulty": "medium",
+    "notes": "Most current of the non-portal boroughs here: August 2026 data was up within two weeks of month end."
+  },
+  {
+    "borough": "Ealing",
+    "gss_code": "E09000009",
+    "landing_page": "https://www.ealing.gov.uk/info/201041/council_budgets_and_spending/864/council_spending_over_250",
+    "verified_live": true,
+    "open_data_portal": null,
+    "api": null,
+    "dataset_id": null,
+    "example_api_request": null,
+    "format": "CSV",
+    "frequency": "Monthly",
+    "threshold": "£250 (was £500 before August 2012)",
+    "earliest_period": "FY 2013/14 on the current page (a 2013/14 download entry exists); the page lists one entry per financial year from 2013/14 to 2026/27",
+    "latest_period": "June 2026",
+    "url_pattern": "Two hops. Financial-year page https://www.ealing.gov.uk/downloads/download/<catalogue_id>/<fy>_council_spend_over_250 lists monthly files at https://www.ealing.gov.uk/download/downloads/id/<file_id>/<month>_<year>.csv",
+    "example_file_urls": [
+      "https://www.ealing.gov.uk/downloads/download/8865/2026_to_2027_council_spend_over_250",
+      "https://www.ealing.gov.uk/download/downloads/id/21601/june_2026.csv",
+      "https://www.ealing.gov.uk/download/downloads/id/21599/april_2026.csv"
+    ],
+    "urls_predictable": false,
+    "url_discovery": "Both the catalogue id and the file id are opaque integers. Scrape the landing page for the 14 financial-year pages, then each of those for the monthly CSV links. The final filename (<month>_<year>.csv) is predictable, the id is not.",
+    "sample_columns": [
+      "(unnamed, values like 'INSERTED DETAIL')",
+      "(unnamed, empty)",
+      "Body Name",
+      "Organisation Code",
+      "Service Label",
+      "Service Code",
+      "Organisation Unit",
+      "Expenditure Category",
+      "Expenditure Code",
+      "Narrative",
+      "Date",
+      "Transaction No",
+      "Net Amount",
+      "Supplier ID",
+      "Amended Supplier Name"
+    ],
+    "obstacles": "Header row starts with two unnamed columns; the first carries a row-status flag ('INSERTED DETAIL'). Narrative is often blank. Date is dd/mm/yyyy. Two-hop scrape.",
+    "contracts_register": null,
+    "purchase_card": null,
+    "grants": null,
+    "other_links": {
+      "open_and_accountable": "https://www.ealing.gov.uk/info/201041/council_budgets_and_spending/1256/open_and_accountable",
+      "all_finance_downloads": "https://www.ealing.gov.uk/downloads/201041/council_budgets_and_spending"
+    },
+    "difficulty": "medium",
+    "notes": "£250 threshold means roughly twice the row count of a £500 borough. One of only two boroughs in this batch publishing below £500. No contracts register or purchase card data found on the pages I fetched."
+  },
+  {
+    "borough": "Enfield",
+    "gss_code": "E09000010",
+    "landing_page": "https://www.enfield.gov.uk/services/your-council/what-we-spend-and-how-we-spend-it",
+    "verified_live": false,
+    "open_data_portal": null,
+    "api": null,
+    "dataset_id": null,
+    "example_api_request": null,
+    "format": "CSV and XLSX (based on file URLs in the search index; not confirmed by fetch)",
+    "frequency": "Monthly (purchase card files are monthly; spend-over-£500 cadence unconfirmed)",
+    "threshold": "£500, described on the site as 'Transactions over £500' (unconfirmed by fetch)",
+    "earliest_period": "unknown",
+    "latest_period": "unknown; purchase card files as recent as July 2025 appear in the search index",
+    "url_pattern": "Squiz Matrix asset paths: https://www.enfield.gov.uk/__data/assets/file/<4-digit>/<5-6 digit>/<Name>.csv (also __data/assets/excel_doc/... for XLSX)",
+    "example_file_urls": [
+      "https://www.enfield.gov.uk/__data/assets/file/0009/102330/Monthly-purchase-card-transactions-July-2025-Business-and-licensing.csv",
+      "https://www.enfield.gov.uk/__data/assets/excel_doc/0013/19102/Monthly-purchase-card-transactions-August-2021-Business-and-licensing.xlsx"
+    ],
+    "urls_predictable": false,
+    "url_discovery": "Would need scraping; the two numeric path segments are Squiz asset ids and cannot be derived.",
+    "obstacles": "Cloudflare managed challenge on the whole domain. Every request, including the landing page, /sitemap.xml and direct static CSV assets, returned HTTP 403 with the 'Just a moment... Enable JavaScript and cookies to continue' interstitial (cf challenge-platform, cRay present). WebFetch and curl with a browser User-Agent both fail. Needs a real browser (Playwright with the JS challenge solved) or a residential proxy.",
+    "contracts_register": null,
+    "purchase_card": "Monthly purchase card CSVs exist under /__data/assets/file/... (see example URLs); the index page URL was not confirmable",
+    "grants": null,
+    "other_links": {
+      "business_page": "https://www.enfield.gov.uk/services/business-and-licensing/doing-business-with-the-council"
+    },
+    "difficulty": "hard",
+    "notes": "Two fetch attempts plus a sitemap probe, all blocked. Nothing here is verified. The example file URLs come from the search index only; the purchase card files are not the spend-over-£500 series. data.gov.uk has nothing current for Enfield (only a 2013 PCT dataset)."
+  },
+  {
+    "borough": "Greenwich",
+    "gss_code": "E09000011",
+    "landing_page": "https://www.royalgreenwich.gov.uk/council-and-elections/spending-performance-and-standards/information-council-spending",
+    "verified_live": false,
+    "open_data_portal": null,
+    "api": null,
+    "dataset_id": null,
+    "example_api_request": null,
+    "format": "XLSX for recent quarters; older years also have paired CSV files (e.g. 'march 2011 payments over 500 csv')",
+    "frequency": "Quarterly (monthly in 2010-2011)",
+    "threshold": "£500, invoice value including VAT. Excludes salaries, Council Tax refunds, benefit payments and other non-invoice payments.",
+    "earliest_period": "January 2011 monthly files are present (e.g. /downloads/file/830/january_2011_payments_over_500); data.gov.uk describes coverage from December 2010",
+    "latest_period": "January-March 2026 XLSX per the search index; not confirmed by fetch",
+    "url_pattern": "Three levels. Year catalogue https://www.royalgreenwich.gov.uk/downloads/download/<cat_id>/<slug> lists file pages https://www.royalgreenwich.gov.uk/downloads/file/<file_id>/<slug>, each of which links the real file at https://www.royalgreenwich.gov.uk/download/downloads/id/<file_id>/<slug>.xlsx",
+    "example_file_urls": [
+      "https://www.royalgreenwich.gov.uk/downloads/download/1272/quarterly_payments_in_2022_and_2023",
+      "https://www.royalgreenwich.gov.uk/downloads/file/6072/payments_over_500_october_to_december_2022",
+      "https://www.royalgreenwich.gov.uk/download/downloads/id/6072/payments_over_500_october_to_december_2022.xlsx"
+    ],
+    "urls_predictable": false,
+    "url_discovery": "Ids are opaque and the slug must match the id exactly (a wrong slug is rejected). Scrape the landing page for year catalogues, then each catalogue for file pages, then each file page for the download link.",
+    "sample_columns": null,
+    "obstacles": "WAF. The /council-and-elections/ landing page returned 403 for both WebFetch and curl with a browser User-Agent, on www and apex. The /downloads/ area did work at first: I fetched the 2022-23 quarterly catalogue and the Oct-Dec 2022 file page and confirmed both live today. After a scripted id sweep the /downloads/ area also began returning 403, so the site rate-limits and then blocks. Back off hard, add delays, or use a UK residential egress.",
+    "contracts_register": null,
+    "purchase_card": null,
+    "grants": null,
+    "other_links": {
+      "budgets_and_spending_downloads": "https://royalgreenwich.gov.uk/downloads/200167/budgets_and_spending",
+      "financial_information_downloads": "https://royalgreenwich.gov.uk/downloads/10069/financial_information",
+      "data_gov_uk_entry": "https://www.data.gov.uk/dataset/f2b384b5-6d41-4367-bdcd-5bffbb61f850/royal-borough-of-greenwich-spending-over-500"
+    },
+    "difficulty": "hard",
+    "notes": "verified_live is false because the canonical landing page could not be fetched, but I did confirm two real payments-over-£500 pages live today inside the /downloads/ area. I did not download a file, so no column headers. The latest period (Jan-Mar 2026) is from the search index and should be re-checked. A scan of catalogue ids 1100-1620 found no 2024-2026 payments catalogue, so the recent quarters are probably linked directly from the blocked landing page."
+  },
+  {
+    "borough": "Hackney",
+    "verified_live": true,
+    "verified_date": "2026-09-19",
+    "landing_page": "https://hackney.gov.uk/council-and-elections/finances-and-transparency/transparency/council-spending-over-ps250",
+    "secondary_landing_page": "https://hackney.gov.uk/transparency/",
+    "open_data_portal": null,
+    "portal_type": null,
+    "dataset_id": null,
+    "api_example": null,
+    "format": "CSV (Google Drive) plus a parallel Google Sheets copy of each month; 2018-2021 months are 'spreadsheet' + PDF on Google Drive",
+    "frequency": "monthly",
+    "threshold": "£250 (confirmed empirically: minimum row value in July 2026 file is exactly 250.00)",
+    "earliest_period": "March 2018",
+    "latest_period": "July 2026",
+    "url_pattern": "https://drive.google.com/uc?export=download&id=<FILE_ID> where FILE_ID is an opaque Google Drive id scraped from the landing page. Not predictable.",
+    "example_file_urls": [
+      "https://drive.google.com/uc?export=download&id=1p9Y7n_l8lVxiTp1GMl1p-iuV8nXimwhr",
+      "https://drive.google.com/uc?export=download&id=1SdjNYx0l1c5qSMS9mzIhYXyYvsjgtcvd"
+    ],
+    "urls_predictable": false,
+    "scrape_required": true,
+    "sample_columns": [
+      "1. YEAR",
+      "2. MONTH",
+      "3. DATE INCURRED",
+      "4. DATE PAID",
+      "5. BENEFICIARY",
+      "6. SUPPLIER NO.",
+      "7. DEPARTMENT",
+      "8. PURPOSE OF EXPENDITURE",
+      "9. MERCHANT CATEGORY",
+      "Total"
+    ],
+    "sample_file_verified": "July 2026 CSV, 1,250,735 bytes, 6,411 data rows, HTTP 200",
+    "obstacles": [
+      "All files live on Google Drive / Google Sheets, not on the council domain. Drive ids must be scraped from the landing page and re-scraped each month.",
+      "Landing page HTML is ~413KB and stuffed with base64 data: URIs; parse it with an HTML parser, not naive regex.",
+      "Amount column is text with a currency symbol, padding and thousands separators (' £ 1,450.00 '), sometimes quoted. Needs cleaning.",
+      "Column names are numbered ('5. BENEFICIARY'), unusual among London boroughs.",
+      "Google Drive may serve a virus-scan interstitial for larger files; the ~1.2MB monthly files download directly today.",
+      "Two historic CSVs are suspiciously small (May 2023 66kb, November 2023 78kb) against a ~1.1MB norm, so they may be truncated."
+    ],
+    "cyberattack_status": "Hackney was hit by a ransomware attack in October 2020. The monthly series on the current page shows no visible gap: every month from March 2018 to July 2026 is listed, including October, November and December 2020. Publication appears fully recovered and currently runs about two months behind.",
+    "contracts_register": "https://hackney.gov.uk/council-and-elections/finances-and-transparency/transparency/legally-enforceable-agreements-purchase-orders-over-ps5000 (purchase orders over £5,000)",
+    "purchase_card": null,
+    "grants": null,
+    "difficulty": "medium",
+    "notes": "Richest data of the eleven (£250 threshold, line-level, monthly), but the Google Drive hosting makes a script fully dependent on scraping the landing page. An annual health-services contracts summary is published as a Google Doc, not structured data."
+  },
+  {
+    "borough": "Hammersmith and Fulham",
+    "verified_live": true,
+    "verified_date": "2026-09-19",
+    "landing_page": "https://www.lbhf.gov.uk/councillors-and-democracy/data-and-information/transparency/procurement-and-financial-data",
+    "secondary_landing_page": "https://www.lbhf.gov.uk/councillors-and-democracy/data-and-information/transparency",
+    "open_data_portal": "https://data-lbhf.opendata.arcgis.com/",
+    "portal_type": "ArcGIS Hub, but geospatial only (regeneration areas, strategic sites, open spaces, town centres). No spend dataset on it.",
+    "dataset_id": null,
+    "api_example": null,
+    "format": "XLSX only",
+    "frequency": "quarterly",
+    "threshold": "not stated on the page; assume £500 per the Transparency Code. UNCONFIRMED, I could not open the XLSX to check.",
+    "earliest_period": "Q1 2024-25 (only the last nine quarters are listed on the page)",
+    "latest_period": "Q1 2026-27 (April to June 2026), published 2026-09",
+    "url_pattern": "https://www.lbhf.gov.uk/sites/default/files/<YYYY-MM>/spend-data-q<N>-<FY>.xlsx for recent quarters; older ones use the lbhf-spend-data-q<N>-<FY>.xlsx prefix. The directory month and the prefix both change, so scrape.",
+    "example_file_urls": [
+      "https://www.lbhf.gov.uk/sites/default/files/2026-09/spend-data-q1-2026-27.xlsx",
+      "https://www.lbhf.gov.uk/sites/default/files/2026-03/spend-data-q3-2025-26.xlsx"
+    ],
+    "urls_predictable": false,
+    "scrape_required": true,
+    "sample_columns": null,
+    "sample_file_verified": "No. Direct file fetch returns HTTP 202 with an empty body (WAF challenge).",
+    "obstacles": [
+      "AWS WAF challenge on the whole lbhf.gov.uk domain: responses carry 'x-amzn-waf-action: challenge' behind CloudFront and return HTTP 202 with a 0-byte or 2.4KB JS interstitial.",
+      "This blocks plain curl AND the WebFetch tool (both got an empty page). It also blocks direct /sites/default/files/*.xlsx downloads, so the files are not reachable outside the challenge.",
+      "I read the page through the r.jina.ai text proxy, which does solve the challenge. A headless browser that executes the WAF JS would work too.",
+      "XLSX only, no CSV.",
+      "Only nine quarters are kept on the page; older data is not linked."
+    ],
+    "contracts_register": "https://www.lbhf.gov.uk/sites/default/files/2026-08/q1-2026-contracts-over-ps5k.xlsx (contracts over £5,000, quarterly; a full contracts register XLSX was last published September 2024)",
+    "purchase_card": "https://www.lbhf.gov.uk/sites/default/files/2026-09/procurement-card-spend-q1-2026-27.xlsx (quarterly)",
+    "grants": null,
+    "difficulty": "hard",
+    "notes": "Data itself is current and well organised (Q1 2026-27 published this month). The single problem is the WAF: any scraper needs a JS-executing client or a proxy. Quarterly invitations-to-tender XLSX are published alongside."
+  },
+  {
+    "borough": "Haringey",
+    "verified_live": true,
+    "verified_date": "2026-09-19",
+    "landing_page": "https://haringey.gov.uk/business/selling-to-council/council-expenditure",
+    "secondary_landing_page": "https://haringey.gov.uk/council-elections/data-finance/contracts-register-expenditure-supplier-invoices",
+    "open_data_portal": null,
+    "portal_type": null,
+    "dataset_id": null,
+    "api_example": null,
+    "format": "CSV and PDF, both published for every quarter",
+    "frequency": "quarterly",
+    "threshold": "not stated on the page. The CSV is NOT a simple over-£500 line dump: rows are aggregated ('Sum of Amount') and include negative values down to -29,695.85, so no row threshold is applied. UNCONFIRMED.",
+    "earliest_period": "Q1 2023-24 (only three financial years are listed on the page)",
+    "latest_period": "Q4 2025-26 (January to March 2026), published 2026-09 alongside Q3 2025-26",
+    "url_pattern": "https://haringey.gov.uk/sites/default/files/<YYYY-MM>/<slug>.csv. The slug changed three times: council_expenditure_q1_23-24.csv, then lbh-expenditure-q3-2024-25.csv, then lbh-expenditure-q1-2025.csv, now lbh-expenditure-q4-2025-26.csv. Scrape it.",
+    "example_file_urls": [
+      "https://haringey.gov.uk/sites/default/files/2026-09/lbh-expenditure-q4-2025-26.csv",
+      "https://haringey.gov.uk/sites/default/files/2025-07/lbh-expenditure-q1-2025.csv"
+    ],
+    "urls_predictable": false,
+    "scrape_required": true,
+    "sample_columns": [
+      "Payment Date",
+      "Supplier Name",
+      "Purpose",
+      "Department",
+      "Sum of Amount"
+    ],
+    "sample_file_verified": "Q4 2025-26 CSV, 789,580 bytes, 8,377 data rows, HTTP 200",
+    "obstacles": [
+      "Only five columns and no transaction id, so rows cannot be deduplicated or joined to invoices.",
+      "Amounts are pre-aggregated per supplier/date/purpose, which is not line-level spend.",
+      "Negative rows (credits) are present.",
+      "Publication is lumpy: Q3 and Q4 of 2025-26 were both uploaded in September 2026, so the data can be six months behind for long stretches.",
+      "Only three financial years are retained on the page.",
+      "No open data portal or API."
+    ],
+    "contracts_register": "https://haringey.gov.uk/council-elections/data-finance/contracts-register-expenditure-supplier-invoices/contracts-register (PDF only, e.g. /sites/default/files/2024-03/contract_register_q3-23-24.pdf)",
+    "purchase_card": "https://haringey.gov.uk/business/selling-council/council-expenditure/purchase-card-expenditure",
+    "grants": null,
+    "difficulty": "easy",
+    "notes": "Easiest to download of the eleven (plain CSV on the council domain, no bot blocking), but the weakest data quality: aggregated, five columns, no transaction ids."
+  },
+  {
+    "borough": "Harrow",
+    "verified_live": true,
+    "verified_date": "2026-09-19",
+    "landing_page": "https://www.harrow.gov.uk/council/council-spending",
+    "secondary_landing_page": "https://www.harrow.gov.uk/downloads/download/12587/council-budgets-and-spending",
+    "open_data_portal": null,
+    "portal_type": null,
+    "dataset_id": null,
+    "api_example": null,
+    "format": "XLSX and PDF for each quarter (older quarters are XLS)",
+    "frequency": "quarterly",
+    "threshold": "£500 (stated on the landing page: spending for goods and services over £500.00, gross including VAT)",
+    "earliest_period": "January to March 2022 in the 55 links returned on the first page of the downloads collection; the collection may page back further",
+    "latest_period": "April to June 2026",
+    "url_pattern": "https://www.harrow.gov.uk/downloads/file/<NUMERIC_ID>/<slug>. Ids are sequential-ish but arbitrary and the slug wording drifts (council-spend-..., council budget and spending report ...). Scrape the collection page.",
+    "example_file_urls": [
+      "https://www.harrow.gov.uk/downloads/file/34070/council-spend-april-june-2026-xlsx-",
+      "https://www.harrow.gov.uk/downloads/file/33714/council-spend-january-march-2026"
+    ],
+    "urls_predictable": false,
+    "scrape_required": true,
+    "sample_columns": null,
+    "sample_file_verified": "No. Landing page and downloads collection fetched (HTTP 200); the XLSX itself was not opened.",
+    "obstacles": [
+      "No CSV at any point, XLSX or PDF only.",
+      "The data.gov.uk entry for Harrow (dataset bc21b2be-7387-4b26-a7c7-c7a33caca9e1) is dead: it lists 2010-2011 monthly returns pointing at webarchive.nationalarchives.gov.uk. Do not use it.",
+      "Two identically-titled links per quarter (the XLSX and the PDF) with no format suffix in recent entries, e.g. two links both named 'Council Spend January - March 2026'. Check content-type per file.",
+      "Numeric download ids must be scraped; https://www.harrow.gov.uk/downloads and /downloads/200062/council_spending both 404.",
+      "Landing page carries no file links at all, only a pointer to the downloads collection."
+    ],
+    "contracts_register": "Not found in structured form. https://www.harrow.gov.uk/business/procurement/2 carries only a single contract PDF.",
+    "purchase_card": "https://www.harrow.gov.uk/downloads/file/34064/purchase-card-spend-april-june-2026-xlsx- (quarterly, published alongside council spend)",
+    "grants": null,
+    "difficulty": "medium",
+    "notes": "Current (Apr-Jun 2026 is up) and unblocked, but XLSX-only and entirely dependent on scraping numeric ids from one Jadu downloads collection."
+  },
+  {
+    "borough": "Havering",
+    "verified_live": true,
+    "verified_date": "2026-09-19",
+    "landing_page": "https://www.havering.gov.uk/council-data-spending/spend-500",
+    "secondary_landing_page": "https://www.havering.gov.uk/council-data-spending/publication-payments-data-general-notes",
+    "open_data_portal": null,
+    "portal_type": null,
+    "dataset_id": null,
+    "api_example": null,
+    "format": "CSV",
+    "frequency": "monthly, grouped into one collection page per financial year",
+    "threshold": "£500",
+    "earliest_period": "2010-11 (December 2010)",
+    "latest_period": "July 2026",
+    "url_pattern": "Two hops. Year collection: https://www.havering.gov.uk/downloads/download/<ID>/spend-over-500-<YYYY-YY> (2026-27 is id 1112, 2025-26 is 1069, 2024-25 is 1034). Month file: https://www.havering.gov.uk/downloads/file/<ID>/<month>-<year>. The month slug is predictable, the numeric id is not.",
+    "example_file_urls": [
+      "https://www.havering.gov.uk/downloads/file/7520/july-2026",
+      "https://www.havering.gov.uk/downloads/file/7519/june-2026"
+    ],
+    "urls_predictable": false,
+    "scrape_required": true,
+    "sample_columns": [
+      "Transaction Date",
+      "Local Authority Department",
+      "Beneficiary",
+      "Purpose of Expenditure",
+      "Amount (excluding VAT)",
+      "Non Recoverable VAT",
+      "Merchant Category"
+    ],
+    "sample_file_verified": "July 2026 CSV, 1,010,023 bytes, 7,894 data rows, HTTP 200, served as text/csv with filename Transparency_Spend___July_2026.csv",
+    "obstacles": [
+      "Numeric download ids must be scraped from each year's collection page; the year collection ids themselves must be scraped from the landing page.",
+      "Leading whitespace on every data value (' 21-07-2026', ' Collection Fund Dir'), so strip on parse.",
+      "Dates are DD-MM-YYYY.",
+      "Redacted personal data is expected per the council's published notes."
+    ],
+    "contracts_register": "Not found in structured form. Waste contracts only: https://www.havering.gov.uk/downloads/file/317/waste-contracts",
+    "purchase_card": null,
+    "grants": "https://www.havering.gov.uk/downloads/file/323/grants-to-voluntary-and-community-sector",
+    "difficulty": "easy",
+    "notes": "Clean monthly CSV, complete back to December 2010, served without bot blocking. The best-structured of the eleven after Hounslow. Two-hop scrape is trivial."
+  },
+  {
+    "borough": "Hillingdon",
+    "verified_live": true,
+    "verified_date": "2026-09-19",
+    "landing_page": "https://www.hillingdon.gov.uk/council-spending-500 (redirects to https://pre.hillingdon.gov.uk/performance-spending/council-spending-500)",
+    "secondary_landing_page": "https://pre.hillingdon.gov.uk/strategies-policies-projects/transparency-data",
+    "open_data_portal": null,
+    "portal_type": null,
+    "dataset_id": null,
+    "api_example": null,
+    "format": "XLSX for recent months (confirmed for August 2026). Earlier years may be CSV, not checked.",
+    "frequency": "monthly, grouped into one collection page per calendar year",
+    "threshold": "£500",
+    "earliest_period": "2010",
+    "latest_period": "August 2026",
+    "url_pattern": "Two hops. Year collection: https://pre.hillingdon.gov.uk/downloads/download/<ID>/<YYYY>-council-spending-over-500 (2026 is id 299, 2025 is 22, 2024 is 23, descending to 2010 = id 37). Month file: https://pre.hillingdon.gov.uk/downloads/file/<ID>/<month>-<year>-council-spending-over-500.",
+    "example_file_urls": [
+      "https://pre.hillingdon.gov.uk/downloads/file/3174/august-2026-council-spending-over-500",
+      "https://pre.hillingdon.gov.uk/downloads/file/3175/july-2026-council-spending-over-500"
+    ],
+    "urls_predictable": false,
+    "scrape_required": true,
+    "sample_columns": null,
+    "sample_file_verified": "August 2026 file downloaded, HTTP 200, 209,993 bytes, content-type application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, filename August_2026___council_spending_over___500.xlsx. Binary, so headers not read.",
+    "obstacles": [
+      "Everything now serves from the 'pre.hillingdon.gov.uk' hostname, including the canonical redirect from www. That looks like a staging hostname promoted to production; treat it as fragile and always follow redirects rather than hardcoding the host.",
+      "XLSX, not CSV, for current months.",
+      "Numeric download ids must be scraped at both levels.",
+      "Month links within a year collection are not in chronological order in the HTML.",
+      "Excluded from the data by policy: payments to schools, government bodies, banks, and individuals (refunds, grants, benefits)."
+    ],
+    "contracts_register": "https://hillingdon.sharepoint.com/:x:/s/Procurement/EUu4-1H1smtLrBKdsnnOXzsBJGM1Dx4aE8P7xSzzedYqyQ?e=aPQOQ2 (external SharePoint link from the transparency page, may require interactive access)",
+    "purchase_card": null,
+    "grants": null,
+    "difficulty": "medium",
+    "notes": "Most current of the eleven (August 2026 already up). Downsides are XLSX-only and the odd pre. hostname."
+  },
+  {
+    "borough": "Hounslow",
+    "verified_live": true,
+    "verified_date": "2026-09-19",
+    "landing_page": "https://data.hounslow.gov.uk/@london-borough-of-hounslow/council-spending-over-500",
+    "secondary_landing_page": "https://www.hounslow.gov.uk/find-data-information/council-budgets-spending/4",
+    "open_data_portal": "https://data.hounslow.gov.uk/",
+    "portal_type": "DataPress / Datopian portal (Next.js front end over a CKAN-derived catalogue). Files are stored on blob.datopian.com.",
+    "dataset_id": "9ead27db-ae4d-4b8f-805d-dfcb04ca2f41 (slug: council-spending-over-500, 140 resources)",
+    "api_example": "GET https://data.hounslow.gov.uk/_next/data/<buildId>/@london-borough-of-hounslow/council-spending-over-500.json returns the full dataset record with all 140 resources (id, title, format, url, last_modified). Verified today with buildId PTSbv9Gst0ETBizzaJIsa, returning 2,181,283 bytes of JSON. The buildId changes on every portal deploy, so read it from the page HTML first: curl the dataset page and grep \"buildId\":\"([^\"]+)\". The classic CKAN endpoints (/api/3/action/package_show, /api/action/package_show, /api/dataset/<id>) all return 404 on this portal.",
+    "format": "mostly CSV, occasionally XLSX (May 2026 was published as XLSX)",
+    "frequency": "monthly",
+    "threshold": "£500",
+    "earliest_period": "September 2010 to March 2011",
+    "latest_period": "July 2026 (resource last_modified 2026-08-03)",
+    "url_pattern": "https://blob.datopian.com/resources/<uuid>/<Filename>-<6charRandom>.csv. Both the uuid and the random suffix are unguessable, so the resource url must be read from the dataset JSON or page.",
+    "example_file_urls": [
+      "https://blob.datopian.com/resources/07f66603-3b18-48df-9d12-f19d4c73fa49/Invoices%20Over%20500%20July%202026-iB3hoV.csv",
+      "https://blob.datopian.com/resources/a18bf5b3-052c-4b9b-968b-189e441211ec/Invoices%20Over%20500%20Jun%202026-2mEY4B.csv"
+    ],
+    "urls_predictable": false,
+    "scrape_required": false,
+    "sample_columns": [
+      "OrganisationalUnit",
+      "ServiceCategoryLabel",
+      "Redaction Necessary",
+      "BeneficiaryName",
+      "SupplierID",
+      "SupplierName",
+      "PaymentDate",
+      "TransactionNumber",
+      "Amount",
+      "IrrecoverableVATAmount",
+      "Purpose",
+      "CategoryInternalName"
+    ],
+    "sample_file_verified": "July 2026 CSV, 523,152 bytes, 2,576 data rows, HTTP 200 text/csv",
+    "obstacles": [
+      "No stable public API. The only machine-readable route is the Next.js _next/data JSON, whose buildId rotates on deploy. A scraper must resolve the buildId each run or fall back to parsing __NEXT_DATA__ out of the page HTML.",
+      "Dataset page HTML is 2.5MB because the whole resource list is inlined.",
+      "Format is inconsistent month to month (CSV vs XLSX).",
+      "Resource titles are inconsistent ('Invoice over £500 May 2026' vs 'Invoices Over 500 Jun 2026'), so parse the period from the title with care.",
+      "Supplier names are replaced with 'redacted - personal data' where the payee is an individual; there is a 'Redaction Necessary' column."
+    ],
+    "contracts_register": null,
+    "purchase_card": "https://data.hounslow.gov.uk/@london-borough-of-hounslow/p-card-expenditure (monthly, latest July 2026)",
+    "grants": "https://data.hounslow.gov.uk/@london-borough-of-hounslow/grants-to-voluntary-and-community-sector-organisations (latest resource 'Grants July 2026')",
+    "difficulty": "medium",
+    "notes": "Best data model of the eleven: 12 columns including supplier id and transaction number, monthly, back to 2010, plus p-card and grants as sibling datasets. The buildId indirection is the only real friction."
+  },
+  {
+    "borough": "Islington",
+    "verified_live": true,
+    "verified_date": "2026-09-19",
+    "landing_page": "https://www.islington.gov.uk/about-the-council/information-governance/freedom-of-information/publication-scheme/what-we-spend-and-how-we-spend-it/council-spending",
+    "secondary_landing_page": null,
+    "open_data_portal": null,
+    "portal_type": null,
+    "dataset_id": null,
+    "api_example": null,
+    "format": "CSV",
+    "frequency": "quarterly",
+    "threshold": "described as over £500, but the published file is not filtered at £500: the April-June 2026 file contains values from 0.01 upwards. Treat the threshold as nominal.",
+    "earliest_period": "September to November 2019 (on the current page)",
+    "latest_period": "April to June 2026",
+    "url_pattern": "https://www.islington.gov.uk/~/media/sharepoint-lists/public-records/finance/financialmanagement/expenditure/<FY as 8 digits, e.g. 20262027>/<slug>.csv. The directory is predictable, the slug is not: it has been 20200603expenditurefordecemberthroughfebruary2020.csv, expenditure-for-june-through-to-august-2022.csv, expenditure-report-for-april-to-june-2025.csv and april-through-to-june-26-expenditure-report.csv.",
+    "example_file_urls": [
+      "https://www.islington.gov.uk/~/media/sharepoint-lists/public-records/finance/financialmanagement/expenditure/20262027/april-through-to-june-26-expenditure-report.csv",
+      "https://www.islington.gov.uk/~/media/sharepoint-lists/public-records/finance/financialmanagement/expenditure/20252026/expenditure-report-for-october-to-december-2025.csv"
+    ],
+    "urls_predictable": false,
+    "scrape_required": true,
+    "sample_columns": [
+      "Supplier Name",
+      "Directorate",
+      "Input Date",
+      "Nominal Description",
+      "Amount",
+      "Transaction Type",
+      "(4 unnamed trailing empty columns)"
+    ],
+    "sample_file_verified": "April-June 2026 CSV, 1,925,623 bytes, 19,335 data rows, HTTP 200 text/csv",
+    "obstacles": [
+      "Four trailing empty columns on every row; the header ends with ',,,,'.",
+      "The £500 threshold is not actually applied to rows (minimum value 0.01), so downstream filtering is on you.",
+      "Amount values carry a trailing space ('500.00 ').",
+      "Dates are DD-Mon-YYYY ('08-May-2026').",
+      "No transaction id, so rows cannot be deduplicated across republished files.",
+      "File slugs are free text with no convention; scrape by link, never construct.",
+      "Some historic quarters overlap or have odd boundaries ('March 2023 through to June 2023' is four months)."
+    ],
+    "contracts_register": "Not found. https://www.islington.gov.uk/business/tenders-and-contracts/contracts-register returns 404.",
+    "purchase_card": null,
+    "grants": null,
+    "difficulty": "easy",
+    "notes": "Plain CSV on the council domain, no bot blocking, current to Q1 2026-27. Slug chaos is the only obstacle and a link scrape solves it."
+  },
+  {
+    "borough": "Kensington and Chelsea",
+    "verified_live": true,
+    "verified_date": "2026-09-19",
+    "landing_page": "https://www.rbkc.gov.uk/council-councillors-and-democracy/open-data-and-transparency/suppliers-contracts-transactions-equalities-information-and-staff-data",
+    "secondary_landing_page": "https://www.rbkc.gov.uk/council-councillors-and-democracy/open-data-and-transparency/transparency-and-open-data",
+    "open_data_portal": null,
+    "portal_type": null,
+    "dataset_id": null,
+    "api_example": null,
+    "format": "CSV for Q1 2015 through Q4 2025; Q1 2026 was published as XLSX",
+    "frequency": "quarterly",
+    "threshold": "£500",
+    "earliest_period": "Quarter One 2015 (April 2015)",
+    "latest_period": "Quarter One 2026 (April to June 2026), XLSX, 1.88 MB",
+    "url_pattern": "https://www.rbkc.gov.uk/media/document/<slug>. The slug changed conventions three times: 'quarter-one-2015' through 'quarter-four-2023', then 'payments-over-%C2%A3500-quarter-one-2024', and there are stray variants with a leading hyphen ('-payments-over-%C2%A3500-quarter-two-2025') or a double hyphen ('payments-over-%C2%A3500--quarter-four-2024'). Scrape, do not construct.",
+    "example_file_urls": [
+      "https://www.rbkc.gov.uk/media/document/payments-over-%C2%A3500-quarter-one-2026",
+      "https://www.rbkc.gov.uk/media/document/payments-over-%C2%A3500-quarter-four-2025"
+    ],
+    "urls_predictable": false,
+    "scrape_required": true,
+    "sample_columns": null,
+    "sample_file_verified": "No. The landing page rendered through WebFetch, but curl on both the page and the media URLs returns HTTP 403 with a Cloudflare 'Just a moment...' interstitial.",
+    "obstacles": [
+      "Cloudflare bot protection. Plain curl gets 403 and a JS challenge page on both the landing page and the /media/document/ file URLs. A scraper needs a browser or a Cloudflare-solving client.",
+      "File URLs carry no extension, so the format must be read from the content-type or the page text.",
+      "Format switched from CSV to XLSX at Q1 2026.",
+      "Slug conventions are inconsistent across years, including stray leading and double hyphens.",
+      "The grants file on the page is stale (2018-19)."
+    ],
+    "contracts_register": "http://www.londoncontractsregister.co.uk/ (relationships above £20,000). Quarterly contracts-awarded files also published, e.g. https://www.rbkc.gov.uk/media/document/contracts-awarded-quarter-three-2024 (XLSX), though these appear to stop at Q3 2024.",
+    "purchase_card": null,
+    "grants": "https://www.rbkc.gov.uk/media/document/rbkc-grant-allocations-2018-19 (XLSX, stale, 2018-19 only)",
+    "difficulty": "hard",
+    "notes": "Long, complete quarterly series back to 2015, but Cloudflare blocks scripted access and I could not verify the file contents or headers. Contracts-awarded publication looks to have lapsed after Q3 2024."
+  },
+  {
+    "borough": "Kingston upon Thames",
+    "verified_live": true,
+    "verified_date": "2026-09-19",
+    "landing_page": "https://www.kingston.gov.uk/your-council/privacy-and-data/local-government-transparency-code/finance",
+    "secondary_landing_page": "https://www.kingston.gov.uk/your-council/privacy-and-data/local-government-transparency-code",
+    "open_data_portal": "https://data.kingston.gov.uk/",
+    "portal_type": "'Kingston Data', a WordPress site that embeds ArcGIS content. HTTP 200 today. No spend dataset and no working API found: /api/search/v1/... returns 404 and serves the WordPress theme. Not usable for spend.",
+    "dataset_id": null,
+    "api_example": null,
+    "format": "CSV",
+    "frequency": "monthly",
+    "threshold": "£500 (page headings read 'Items of spend over £500 <Month> <Year>')",
+    "earliest_period": "April 2020 on the current page",
+    "latest_period": "July 2026",
+    "url_pattern": "https://www.kingston.gov.uk/sites/default/files/<YYYY-MM>/<free text>.csv. Worst naming of the eleven: 'RBK payments over £500 April 2026 - To be published.csv', 'RBK Payments over £500 - June 2026 - To be published.csv', 'RBK payments over £500 - To be published.csv' (July 2026, no month in the filename at all, and the same basename is reused for June 2025). Match on the link TEXT, not the filename.",
+    "example_file_urls": [
+      "https://www.kingston.gov.uk/sites/default/files/2026-08/RBK%20payments%20over%20%C2%A3500%20-%20To%20be%20published.csv",
+      "https://www.kingston.gov.uk/sites/default/files/2026-07/RBK%20Payments%20over%20%C2%A3500%20-%20June%202026%20-%20To%20be%20published.csv"
+    ],
+    "urls_predictable": false,
+    "scrape_required": true,
+    "sample_columns": [
+      "Council Name",
+      "Date",
+      "TransNo",
+      "Amount £ (Excl VAT)",
+      "Supplier name",
+      "Supplier Category",
+      "Expense Area",
+      "Expense Type",
+      "Expense Code",
+      "Unclaimed VAT"
+    ],
+    "sample_file_verified": "July 2026 CSV, 517,219 bytes, 3,166 data rows, HTTP 200",
+    "obstacles": [
+      "Files are NOT UTF-8: the pound sign in the header decodes as byte 0xA3, so read as cp1252 or latin-1.",
+      "Served as application/octet-stream, not text/csv.",
+      "Filenames are non-unique and often omit the month. Two different months can share a basename in different YYYY-MM directories; identify the period from the anchor text.",
+      "Amounts are quoted with thousands separators ('4,539.64').",
+      "The upload directory does not reliably match the data month (September 2025 data sits in a 2025-12 directory, October 2025 in 2025-11).",
+      "data.kingston.gov.uk exists but carries no spend data, so ignore it."
+    ],
+    "contracts_register": "https://www.kingston.gov.uk/your-council/privacy-and-data/local-government-transparency-code/contracts-procurement",
+    "purchase_card": "Same finance page. Monthly government procurement card files, e.g. https://www.kingston.gov.uk/sites/default/files/2026-06/RBK%20LCC%20Open%20Data%20April%202026.xlsx%20-%20Sheet1.csv (latest April 2026; note July 2025 and September 2025 appear to be missing).",
+    "grants": "Neighbourhood Community Grant award PDFs on the same finance page (PDF only, latest 2023-24)",
+    "difficulty": "medium",
+    "notes": "Good ten-column line-level data with transaction numbers, monthly and current to July 2026. The cost is the encoding and the filename chaos, which forces link-text matching."
+  },
+  {
+    "borough": "Lambeth",
+    "verified_live": true,
+    "verified_date": "2026-09-19",
+    "landing_page": "https://www.lambeth.gov.uk/about-council/transparency-open-data/financial-information/expenditure-over-ps500",
+    "secondary_landing_page": "https://www.lambeth.gov.uk/about-council/transparency-open-data/financial-information",
+    "open_data_portal": "https://www.lambeth.gov.uk/lambeth-data-hub/london-borough-lambeth-expenditure-over-ps500",
+    "portal_type": "'Lambeth data hub' is a plain Drupal page, not a data portal. No API, and the page links only one stale 2022-23 Q4 XLSX. Use the main expenditure page instead.",
+    "dataset_id": null,
+    "api_example": null,
+    "format": "CSV since 2023-24 Q4; XLSX for 2020-21 through 2023-24 Q3; monthly CSV for December 2010 to 2013",
+    "frequency": "quarterly (monthly before 2014)",
+    "threshold": "£500",
+    "earliest_period": "December 2010",
+    "latest_period": "2026-27 Q1 (April to June 2026)",
+    "url_pattern": "https://www.lambeth.gov.uk/sites/default/files/<YYYY-MM>/Over_500_Transparency_Report_<FY>Q<N>.csv for the newest file, but earlier ones use spaces, a URL-encoded pound sign (%C2%A3) and a trailing en dash (%E2%80%93), e.g. 'Over %C2%A3500 Transparency Report 2025-26 Q3 %E2%80%93 publish.csv'. Some old files also sit on beta.lambeth.gov.uk. Scrape.",
+    "example_file_urls": [
+      "https://www.lambeth.gov.uk/sites/default/files/2026-07/Over_500_Transparency_Report_2026-27Q1.csv",
+      "https://www.lambeth.gov.uk/sites/default/files/2026-04/Over_%C2%A3500_Transparency_Report_2025-26%20Q4.csv"
+    ],
+    "urls_predictable": false,
+    "scrape_required": true,
+    "sample_columns": [
+      "Over £500 Report Ref",
+      "PAYMENT_DATE",
+      "Supplier Name *******",
+      "Vendor Type",
+      "Amount",
+      "Directorate",
+      "Division",
+      "Subjective Description",
+      "Proclass Category"
+    ],
+    "sample_file_verified": "2026-27 Q1 CSV, 12,612,312 bytes, 83,985 data rows, HTTP 200 text/csv",
+    "obstacles": [
+      "Files are NOT UTF-8: the pound sign in the header decodes as byte 0xA3, so read as cp1252 or latin-1.",
+      "Largest files of the eleven (12.6MB, ~84k rows per quarter); stream rather than load whole.",
+      "Column name 'Supplier Name *******' contains literal asterisks marking the redaction footnote.",
+      "Amounts carry a trailing space ('895.00 ').",
+      "By policy Lambeth excludes payments to people receiving direct payments for social care and to people providing care, so the file is not complete spend.",
+      "Format changed from XLSX to CSV mid-2024, so a historical backfill must handle both.",
+      "Some pre-2023 files are still served from beta.lambeth.gov.uk."
+    ],
+    "contracts_register": null,
+    "purchase_card": "https://www.lambeth.gov.uk/about-council/transparency-open-data/financial-information/government-procurement-card-expenditure",
+    "grants": null,
+    "difficulty": "easy",
+    "notes": "Deepest history (December 2010) and the richest quarterly file, with a report reference per row that gives a usable primary key. No bot blocking. Watch the encoding and the size."
+  },
+  {
+    "borough": "Lewisham",
+    "verified_live": true,
+    "verified_date": "2026-09-19",
+    "landing_page": "https://lewisham.gov.uk/mayorandcouncil/aboutthecouncil/finances/council-spending-over-250",
+    "open_data_portal": {
+      "has_portal": false,
+      "platform": null,
+      "dataset_id": null,
+      "example_api_request": null,
+      "notes": "data.lewisham.gov.uk does not resolve (DNS failure). No Socrata/CKAN/DataPress/ArcGIS Hub found. Transparency hub is https://lewisham.gov.uk/mayorandcouncil/aboutthecouncil/open-data-and-transparency"
+    },
+    "format": [
+      "CSV",
+      "PDF"
+    ],
+    "frequency": "monthly",
+    "threshold": "£250 (was £500 for 2010-11 and 2011-12)",
+    "earliest_period": "2010-11 financial year (at £500); £250 series from 2012-13",
+    "latest_period": "July 2026",
+    "url_pattern": "https://lewisham.gov.uk/-/media/mayor-and-council/about-us/finances/spending-over-250/{FY2}/{mon}{yyyy}paymentsover250.csv  where FY2 = '26-27' style and mon = 'jul' style. PDF variant inserts an underscore: {mon}{yyyy}_paymentsover250.pdf",
+    "predictable_urls": "semi-predictable; CSV naming has been stable recently but the PDF/CSV naming differs and older years vary, so scrape the landing page",
+    "example_file_urls": [
+      "https://lewisham.gov.uk/-/media/mayor-and-council/about-us/finances/spending-over-250/26-27/jul2026paymentsover250.csv",
+      "https://lewisham.gov.uk/-/media/mayor-and-council/about-us/finances/spending-over-250/26-27/jul2026_paymentsover250.pdf"
+    ],
+    "verified_download": {
+      "url": "https://lewisham.gov.uk/-/media/mayor-and-council/about-us/finances/spending-over-250/26-27/jul2026paymentsover250.csv",
+      "http_status": 200,
+      "content_type": "text/csv",
+      "bytes": 824616
+    },
+    "column_headers": [
+      "PAYMENT DATE",
+      "SUPPLIER",
+      "SERVICE",
+      "DEPARTMENT",
+      "DESCRIPTION",
+      "£ SPEND (EXCLUDING VAT)"
+    ],
+    "obstacles": [
+      "Two preamble rows before the header row (title row plus a blank row); parser must skip to row 3",
+      "cp1252 / latin-1 encoding, the £ sign arrives as byte 0xA3 not UTF-8",
+      "Amounts are quoted strings with thousands separators, e.g. \"1,911.75\"",
+      "Supplier name replaced with the literal 'Redacted' on some rows (social care)",
+      "Azure Application Gateway front end; no bot blocking seen, plain curl works"
+    ],
+    "contracts_register": "https://lewisham.gov.uk/myservices/business/tendersandcontracts (portal page, not a structured file)",
+    "purchase_card_spend": "https://lewisham.gov.uk/mayorandcouncil/aboutthecouncil/finances/government-procurement-card",
+    "grants_data": "https://lewisham.gov.uk/mayorandcouncil/aboutthecouncil/open-data-and-transparency/grants-to-voluntary-community-and-social-enterprise-organisations",
+    "difficulty": "easy",
+    "notes": "Cleanest of the CSV publishers in this set apart from the preamble rows. Monthly cadence is current: July 2026 was up on 2026-09-19."
+  },
+  {
+    "borough": "Merton",
+    "verified_live": true,
+    "verified_date": "2026-09-19",
+    "landing_page": "https://www.merton.gov.uk/council-and-local-democracy/data-protection-and-freedom-of-information/open-data/spending-over-500",
+    "open_data_portal": {
+      "has_portal": false,
+      "platform": "data.merton.gov.uk is live but is a JSNA / statistical observatory (WordPress front end over Esri/ArcGIS), not a spend catalogue",
+      "dataset_id": null,
+      "example_api_request": null,
+      "notes": "Confirmed by fetching https://data.merton.gov.uk/ : sections are population, deprivation, housing, health. No finance or expenditure section and no dataset API for spend."
+    },
+    "format": [
+      "CSV"
+    ],
+    "frequency": "quarterly publication of a cumulative year-to-date file for recent years; discrete monthly CSVs for 2010 to ~2021",
+    "threshold": "£500",
+    "earliest_period": "August 2010",
+    "latest_period": "2026 calendar-year YTD file, covering to period 04 (July 2026), uploaded 2026-09",
+    "url_pattern": "https://www.merton.gov.uk/sites/default/files/{YYYY-MM upload folder}/{inconsistent filename}.csv  (Drupal). Legacy monthly files sit under https://www.merton.gov.uk/system/files/{month}_{year}.csv",
+    "predictable_urls": "no; the upload-month folder and the filename both vary. Must scrape the landing page",
+    "example_file_urls": [
+      "https://www.merton.gov.uk/sites/default/files/2026-09/2026%20GTR500YTD.xlsx.csv",
+      "https://www.merton.gov.uk/sites/default/files/2026-04/2025YEARENDInvoice500.csv",
+      "https://www.merton.gov.uk/system/files/october_2010.csv"
+    ],
+    "verified_download": {
+      "url": "https://www.merton.gov.uk/sites/default/files/2026-09/2026%20GTR500YTD.xlsx.csv",
+      "http_status": 200,
+      "content_type": "application/octet-stream",
+      "bytes": 4060495
+    },
+    "column_headers": [
+      "(unnamed row index)",
+      "Directorate",
+      "Supplier Name",
+      "Supplier Invoice No",
+      "Payment Date",
+      "Gross Invoice Value",
+      "Vat Amount",
+      "Vendor Id",
+      "Purpose of Expenditure",
+      "Description",
+      "Redact flag",
+      "Year",
+      "Period"
+    ],
+    "obstacles": [
+      "Cumulative YTD file is republished each quarter and supersedes itself, so a scraper must replace rather than append, or dedupe on Supplier Invoice No",
+      "Filename '2026 GTR500YTD.xlsx.csv' is a CSV despite the .xlsx infix; served as application/octet-stream",
+      "Zero-padded numeric strings (Vat Amount '000000000.00', Vendor Id '000019') need string handling",
+      "Purchase-card lines are mixed into the same file as 'Purchase Card Internal Supplier'",
+      "'Redact flag' column present; publication lags roughly one quarter"
+    ],
+    "contracts_register": "https://www.londontenders.org/procontract/portal_contracts.nsf/fcontent?ReadForm&requesttype=view&requestview=authority&region=REG-ILST-77VS4H&authority=ORG-DNWC-89ZJKW&sd=&stype=&rv=authority&start=1&count=10&contentid=1.003 (ProContract, HTML only)",
+    "purchase_card_spend": "https://www.merton.gov.uk/council-and-local-democracy/data-protection-and-freedom-of-information/open-data/government-procurement-card-transactions (XLS; also mixed into the main spend file)",
+    "grants_data": "https://www.merton.gov.uk/communities-and-neighbourhoods/community-groups-and-centres/funding (PDF only)",
+    "difficulty": "medium",
+    "notes": "Shape changed around 2022: instead of monthly files Merton now posts one cumulative CSV per calendar year and refreshes it quarterly. Fine for bulk loading, awkward for incremental ingestion."
+  },
+  {
+    "borough": "Newham",
+    "verified_live": true,
+    "verified_date": "2026-09-19",
+    "landing_page": "https://www.newham.gov.uk/council/council-spending",
+    "open_data_portal": {
+      "has_portal": false,
+      "platform": null,
+      "dataset_id": null,
+      "example_api_request": null,
+      "notes": "data.newham.gov.uk does not resolve. Transparency index at https://www.newham.gov.uk/homepage/259/transparency is a list of Jadu download links, no API."
+    },
+    "format": [
+      "CSV"
+    ],
+    "frequency": "monthly",
+    "threshold": "£250 (the spend page says 'more than £250'; the transparency index headline still says £500, so the page text is inconsistent)",
+    "earliest_period": "January 2019",
+    "latest_period": "August 2026",
+    "url_pattern": "https://www.newham.gov.uk/downloads/file/{numeric_id}/{slug}  (Jadu CMS). The numeric id is allocated at upload and is not derivable from the month",
+    "predictable_urls": "no; ids are opaque and non-monotonic within a month group. Must scrape the landing page to map month -> id",
+    "example_file_urls": [
+      "https://www.newham.gov.uk/downloads/file/11422/payments-to-suppliers-august-2026-csv-",
+      "https://www.newham.gov.uk/downloads/file/11325/payments-to-suppliers-july-2026-csv-",
+      "https://www.newham.gov.uk/downloads/file/9611/payments-to-suppliers-april-2025-csv-"
+    ],
+    "verified_download": {
+      "url": "https://www.newham.gov.uk/downloads/file/11422/payments-to-suppliers-august-2026-csv-",
+      "http_status": 200,
+      "content_type": "text/csv; charset=UTF-8",
+      "bytes": 3964081
+    },
+    "column_headers": [
+      "Transaction Date",
+      "Local Authority Department",
+      "BENEFICIARY",
+      "Purpose",
+      "Amount",
+      "Non Recoverable",
+      "Merchant Category"
+    ],
+    "obstacles": [
+      "Amount column carries a £ sign inside the value and thousands separators in quotes, e.g. \"£6,164.46\"; the £ is cp1252 despite the charset=UTF-8 header",
+      "Date format is DD-MM-YYYY, not ISO",
+      "Slug suffix varies ('-csv-' vs '-csv' vs no suffix on 2019 files), so do not construct slugs",
+      "Files are large (~4 MB per month)",
+      "No bot blocking seen; plain curl works"
+    ],
+    "contracts_register": "https://www.newham.gov.uk/downloads/file/7821/procurement-contract-register",
+    "purchase_card_spend": "not found as a separate dataset; a 'Merchant Category' column in the main file distinguishes commercial vs non-commercial supplier",
+    "grants_data": "https://www.newham.gov.uk/downloads/file/7824/rep-transparency-code-grants-full-list-20240422-sm",
+    "difficulty": "easy",
+    "notes": "Longest unbroken monthly run in this set (Jan 2019 to Aug 2026, ~92 files) and the most current: August 2026 was already up on 2026-09-19. One scrape of the landing page yields every id."
+  },
+  {
+    "borough": "Redbridge",
+    "verified_live": true,
+    "verified_date": "2026-09-19",
+    "landing_page": "https://data.redbridge.gov.uk/View/finance/payments-over-500  (download index: https://data.redbridge.gov.uk/download/finance)",
+    "open_data_portal": {
+      "has_portal": true,
+      "platform": "'DataShare', Redbridge's own ASP.NET MVC open data platform. Not Socrata, CKAN, DataPress or ArcGIS Hub",
+      "dataset_id": "finance/payments-over-500-{FY}, e.g. finance/payments-over-500-2026-27",
+      "example_api_request": "curl -L 'https://data.redbridge.gov.uk/Download/finance/payments-over-500-2026-27/aug-2026/CSV'  (swap the trailing /CSV for /XML for the XML serialisation)",
+      "notes": "No documented JSON API; a /developer/ page exists but is effectively empty. The per-month CSV and XML download endpoints are the machine interface. Full dataset list: https://data.redbridge.gov.uk/View/All (21 datasets)"
+    },
+    "format": [
+      "CSV",
+      "XML"
+    ],
+    "frequency": "monthly",
+    "threshold": "£500",
+    "earliest_period": "2010-11 (bundled dataset payments-over-500-2010-11-to-2012-13)",
+    "latest_period": "August 2026",
+    "url_pattern": "https://data.redbridge.gov.uk/Download/finance/payments-over-500-{FY}/{month-slug}/CSV  where FY is '2026-27' and month-slug is e.g. 'april-2026', 'aug-2026', 'march-2026'. An optional ?version=DD/MM/YYYY query param appears in page links but is not required",
+    "predictable_urls": "mostly; the FY part is predictable but month slugs are inconsistent (full 'april-2026' vs abbreviated 'aug-2026') and the 2026-27 index contains two mislabelled slugs, 'may-2027' and 'june-2027', that should read 2026. Scrape the FY index page for exact slugs",
+    "example_file_urls": [
+      "https://data.redbridge.gov.uk/Download/finance/payments-over-500-2025-26/march-2026/CSV",
+      "https://data.redbridge.gov.uk/Download/finance/payments-over-500-2026-27/aug-2026/CSV",
+      "https://data.redbridge.gov.uk/Download/finance/payments-over-500-2026-27/aug-2026/XML"
+    ],
+    "verified_download": {
+      "url": "https://data.redbridge.gov.uk/Download/finance/payments-over-500-2025-26/march-2026/CSV",
+      "http_status": 200,
+      "content_type": "text/csv; charset=utf-8",
+      "bytes": 10557800
+    },
+    "column_headers": [
+      "Publisher Label",
+      "Publisher URI",
+      "Directorate code",
+      "Directorate",
+      "Service code",
+      "Service",
+      "Revenue or capital code",
+      "Revenue capital",
+      "Cost centre",
+      "Cost centre description",
+      "Bvsub Category",
+      "Bvsub description",
+      "Bvsum code",
+      "Bvsum description",
+      "Account code",
+      "Account description",
+      "Transaction No",
+      "Period",
+      "Transaction Date",
+      "Amount",
+      "Classification code",
+      "Classification description",
+      "Supplier ID",
+      "Supplier description",
+      "Company registration number",
+      "Company registration number Uri",
+      "VAT registration (header truncated at 500 bytes when sampled; more columns follow)"
+    ],
+    "obstacles": [
+      "Very large files, ~10 MB per month, richest schema in this set (30-ish columns, full LGA transparency schema with URIs)",
+      "Month slugs inconsistent and two 2026-27 slugs carry the wrong year",
+      "Legacy front end (jQuery 1.5 from googleapis) but the download endpoints themselves are plain HTTP, no JS needed",
+      "No bot blocking seen"
+    ],
+    "contracts_register": "not on DataShare; not located during this pass",
+    "purchase_card_spend": "not on DataShare; not located during this pass",
+    "grants_data": "not on DataShare; not located during this pass",
+    "difficulty": "easy",
+    "notes": "Best structured source of the eleven. Also publishes payments within 30 days (https://data.redbridge.gov.uk/Download/finance/payments-within-30-days) and Regulation 113(7) data (https://data.redbridge.gov.uk/Download/finance/regulation-113-7)."
+  },
+  {
+    "borough": "Richmond upon Thames",
+    "verified_live": true,
+    "verified_date": "2026-09-19",
+    "landing_page": "https://www.richmond.gov.uk/council_payments_to_suppliers",
+    "open_data_portal": {
+      "has_portal": false,
+      "platform": null,
+      "dataset_id": null,
+      "example_api_request": null,
+      "notes": "data.richmond.gov.uk does not resolve. Umbraco CMS site only."
+    },
+    "format": [
+      "CSV",
+      "PDF"
+    ],
+    "frequency": "monthly",
+    "threshold": "£500 (the page says 'all payments we make of £500 or more, and all procurement card payments')",
+    "earliest_period": "January 2019",
+    "latest_period": "July 2026",
+    "url_pattern": "https://www.richmond.gov.uk/media/{8-char-hash}/council_expenditure_{month}_{yyyy}.csv  — the hash segment is IGNORED by the server, any 8 characters resolve the same file from the filename. Verified: a deliberately bogus hash returns byte-identical content, and an unpublished month returns 404",
+    "predictable_urls": "yes, effectively; use a placeholder hash and construct from the month name. Verify against the landing page for months where naming might drift",
+    "example_file_urls": [
+      "https://www.richmond.gov.uk/media/ke3cwzd4/council_expenditure_july_2026.csv",
+      "https://www.richmond.gov.uk/media/xxxxxxxx/council_expenditure_july_2026.csv",
+      "https://www.richmond.gov.uk/media/xcnncnlt/council_expenditure_january_2025.csv",
+      "https://www.richmond.gov.uk/media/yagn24m1/procurement_card_spend_2026_27_q1.csv"
+    ],
+    "verified_download": {
+      "url": "https://www.richmond.gov.uk/media/ke3cwzd4/council_expenditure_july_2026.csv",
+      "http_status": 200,
+      "content_type": "text/csv",
+      "bytes": 295348
+    },
+    "column_headers": [
+      "Directorate",
+      "Payment Date",
+      "Payment Amount",
+      "Payee",
+      "Supplier No",
+      "Activity"
+    ],
+    "obstacles": [
+      "Header case changes between years: 2026 files are 'Directorate,Payment Date,...', the January 2025 file is 'DIRECTORATE,PAYMENT DATE,...'",
+      "Date format changes between years: '01/07/2026' in 2026 files vs '02 January 2025' in the 2025 file",
+      "UTF-8 BOM at the start of the file",
+      "Amounts quoted with thousands separators",
+      "404 page for a missing month is a 22 KB HTML body, so check the status code, not the size"
+    ],
+    "contracts_register": "not located during this pass",
+    "purchase_card_spend": "https://www.richmond.gov.uk/media/yagn24m1/procurement_card_spend_2026_27_q1.csv (quarterly CSV, verified live via the ignore-hash trick)",
+    "grants_data": "not located during this pass",
+    "difficulty": "easy",
+    "shared_system_with": "Wandsworth",
+    "notes": "Richmond and Wandsworth share staff and share a publication system: the same Umbraco CMS, the same landing-page layout, the same /media/{hash}/ URL scheme, the same filename convention council_expenditure_{month}_{year}.csv, the same six column headers and the same Jan 2019 start date. The media stores are separate, so the same filename returns each borough's own data on its own host. Richmond additionally publishes procurement card spend; no equivalent file was found on Wandsworth's expenditure page."
+  },
+  {
+    "borough": "Southwark",
+    "verified_live": true,
+    "verified_date": "2026-09-19",
+    "landing_page": "https://www.southwark.gov.uk/about-council/transparency/freedom-information-data-protection-and-open-data/open-data/council  (secondary explainer: https://www.southwark.gov.uk/business-and-licences/procurement/council-expenditure-open-data)",
+    "open_data_portal": {
+      "has_portal": false,
+      "platform": "data.southwark.gov.uk is live but is a JSNA / statistical observatory (WordPress over Esri/ArcGIS), not a spend catalogue",
+      "dataset_id": null,
+      "example_api_request": null,
+      "notes": "Confirmed by fetching https://data.southwark.gov.uk/ : sections are population, deprivation, housing, community safety. No finance section, no spend API."
+    },
+    "format": [
+      "XLSX",
+      "XLS for the oldest files"
+    ],
+    "frequency": "monthly",
+    "threshold": "£250 since October 2012 (£500 from August 2010 to September 2012)",
+    "earliest_period": "August 2010",
+    "latest_period": "May 2026 (about four months behind as of 2026-09-19)",
+    "url_pattern": "https://www.southwark.gov.uk/sites/default/files/{YYYY-MM upload folder}/{inconsistent filename}.xlsx  (Drupal)",
+    "predictable_urls": "no; naming flips between 'Council-spending-May-2026.xlsx', 'Council Spending March 2026.xlsx' and 'council_spending_april_2025.xlsx', with occasional '(1)' and '_0' suffixes. Must scrape",
+    "example_file_urls": [
+      "https://www.southwark.gov.uk/sites/default/files/2026-06/Council-spending-May-2026.xlsx",
+      "https://www.southwark.gov.uk/sites/default/files/2026-04/Council%20Spending%20March%202026.xlsx",
+      "https://www.southwark.gov.uk/sites/default/files/2024-09/Council%20Spending%20January%202024.xlsx"
+    ],
+    "verified_download": {
+      "url": "https://www.southwark.gov.uk/sites/default/files/2026-06/Council-spending-May-2026.xlsx",
+      "http_status": 200,
+      "content_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "bytes": 1331168,
+      "rows": 11031
+    },
+    "column_headers": [
+      "date",
+      "department",
+      "beneficiary",
+      "amount",
+      "summary of purpose",
+      "category",
+      "Transaction number",
+      "SAP vendor number"
+    ],
+    "obstacles": [
+      "XLSX only, no CSV variant anywhere in the series",
+      "Dates stored as text in DD.MM.YYYY form ('18.05.2026') rather than as Excel dates",
+      "Filename conventions change every few months, so month-to-URL mapping has to come from the link text",
+      "Publication lag of roughly three to four months: latest file on 2026-09-19 was May 2026",
+      "No bot blocking seen"
+    ],
+    "contracts_register": "not located during this pass",
+    "purchase_card_spend": "not located during this pass",
+    "grants_data": "not located during this pass",
+    "difficulty": "medium",
+    "notes": "Deepest history in this set (back to August 2010) but the slowest to publish and the only borough here with no CSV at all. Also publishes payments within 30 days at https://www.southwark.gov.uk/about-council/transparency/freedom-information-data-protection-and-open-data/open-data/payments"
+  },
+  {
+    "borough": "Sutton",
+    "verified_live": true,
+    "verified_date": "2026-09-19",
+    "landing_page": "https://www.sutton.gov.uk/w/local-government-transparency-code  (also reachable as https://www.sutton.gov.uk/council/budget-and-spending/local-government-transparency-code)",
+    "open_data_portal": {
+      "has_portal": false,
+      "platform": "data.sutton.gov.uk is live but is a JSNA / statistical observatory (WordPress over Esri/ArcGIS), not a spend catalogue",
+      "dataset_id": null,
+      "example_api_request": null,
+      "notes": "data.gov.uk holds a stale pointer record for Sutton spend (dataset c5a3dcbb-757f-4ecf-873f-6a94e8640fb7) but the authoritative files are on sutton.gov.uk."
+    },
+    "format": [
+      "CSV"
+    ],
+    "frequency": "monthly",
+    "threshold": "£500",
+    "earliest_period": "April 2018",
+    "latest_period": "July 2026",
+    "url_pattern": "https://www.sutton.gov.uk/sites/default/files/{YYYY-MM upload folder}/{human-written filename}.csv  (Drupal)",
+    "predictable_urls": "no; filenames are working titles such as 'LBS payments over £500 - To be published (1).csv' and several omit the month entirely. Must scrape and take the period from the link text",
+    "example_file_urls": [
+      "https://www.sutton.gov.uk/sites/default/files/2026-08/LBS%20payments%20over%20%C2%A3500%20-%20To%20be%20published%20%281%29.csv",
+      "https://www.sutton.gov.uk/sites/default/files/2026-07/LBS%20Payments%20over%20%C2%A3500%20April%202026%20-%20To%20be%20published.csv",
+      "https://www.sutton.gov.uk/sites/default/files/2026-08/LBS%20LCC%20Open%20Data%20May%202026.csv"
+    ],
+    "verified_download": {
+      "url": "https://www.sutton.gov.uk/sites/default/files/2026-08/LBS%20payments%20over%20%C2%A3500%20-%20To%20be%20published%20%281%29.csv",
+      "http_status": 200,
+      "content_type": "application/octet-stream",
+      "bytes": 1029608
+    },
+    "column_headers": [
+      "Council Name",
+      "Date",
+      "TransNo",
+      "Amount £ (Excl VAT)",
+      "Supplier name",
+      "Supplier Category",
+      "Expense Area",
+      "Expense Type",
+      "Expense Code",
+      "Unclaimed VAT"
+    ],
+    "obstacles": [
+      "Filenames are unversioned working titles ('- To be published', '(1)') and several carry no month, so the month must be read from the anchor text",
+      "£ appears both in the URL (percent-encoded %C2%A3) and in a column header, in cp1252 bytes in the file body",
+      "Served as application/octet-stream despite being CSV",
+      "Negative amounts (credits) appear alongside the matching charge on the same transaction number",
+      "No bot blocking seen"
+    ],
+    "contracts_register": "https://www.sutton.gov.uk/businesses-and-licensing/business-regulations/tenders-and-contracts",
+    "purchase_card_spend": "https://www.sutton.gov.uk/sites/default/files/2026-08/LBS%20LCC%20Open%20Data%20May%202026.csv (monthly CSV, linked from the same transparency-code page)",
+    "grants_data": "not located during this pass",
+    "difficulty": "medium",
+    "shared_system_with": "possibly Kingston upon Thames (unconfirmed)",
+    "notes": "Sutton's files begin with a 'Council Name' column whose only value is 'London Borough of Sutton'. A per-row council identifier only earns its place in a multi-council extract, which is circumstantial evidence of a finance system shared with Kingston under their shared-services arrangement. I did not verify Kingston's files, so treat this as a hypothesis for the Kingston agent to confirm, not a finding."
+  },
+  {
+    "borough": "Tower Hamlets",
+    "verified_live": true,
+    "verified_date": "2026-09-19",
+    "landing_page": "https://www.towerhamlets.gov.uk/lgnl/council_and_democracy/Transparency/payments_to_suppliers.aspx",
+    "open_data_portal": {
+      "has_portal": false,
+      "platform": null,
+      "dataset_id": null,
+      "example_api_request": null,
+      "notes": "data.towerhamlets.gov.uk does not resolve. Files are served as static documents from the main .aspx site."
+    },
+    "format": [
+      "CSV",
+      "XLSX"
+    ],
+    "frequency": "monthly",
+    "threshold": "£250",
+    "earliest_period": "January 2016 (a 2016 file is reachable); the current landing page lists from January 2020",
+    "latest_period": "July 2026",
+    "url_pattern": "https://www.towerhamlets.gov.uk/Documents/Transparency-data/Payments-to-suppliers/{FY folder}/{filename}.csv  where FY folder is e.g. '2025-2026' and filename is e.g. '250-spend-Jul-26-New' or '250-Spend-Oct-25'",
+    "predictable_urls": "semi-predictable; the folder and stem pattern are stable but capitalisation varies ('250-spend' vs '250-Spend'), a '-New' suffix comes and goes, and the '2025-2026' folder is still being used for 2026-27 months. Scrape the landing page",
+    "example_file_urls": [
+      "https://www.towerhamlets.gov.uk/Documents/Transparency-data/Payments-to-suppliers/2025-2026/250-spend-Jul-26-New.csv",
+      "https://www.towerhamlets.gov.uk/Documents/Transparency-data/Payments-to-suppliers/2025-2026/250-Spend-Oct-25.csv",
+      "https://www.towerhamlets.gov.uk/Documents/Transparency-data/Payments-to-suppliers/2025-2026/PCARD-JUL-26-New.csv"
+    ],
+    "verified_download": {
+      "url": "https://www.towerhamlets.gov.uk/Documents/Transparency-data/Payments-to-suppliers/2025-2026/250-spend-Jul-26-New.csv",
+      "http_status": 200,
+      "content_type": "application/octet-stream",
+      "bytes": 1266275
+    },
+    "column_headers": [
+      "Directorate",
+      "Service",
+      "Division",
+      "Responsible Unit",
+      "Expense Type",
+      "Payment Date",
+      "Trans No",
+      "Net Amount",
+      "Supplier Name"
+    ],
+    "obstacles": [
+      "Header row presence is inconsistent: the July 2026 file has one, the October 2025 file at the same path starts straight on data. A loader must sniff for the header",
+      "Financial-year folder lags reality; 2026-27 months are filed under '2025-2026'",
+      "Served as application/octet-stream",
+      "UTF-8 with typographic apostrophes in directorate names (Chief Executive’s Office)",
+      "No bot blocking seen"
+    ],
+    "contracts_register": "over £100k: https://procontract.due-north.com/ContractsRegister/Index?resetFilter=True&applyFilter=True&p=2241eb95-058a-e511-80f7-000c29c9ba21&v=1 ; below £100k: https://www.towerhamlets.gov.uk/Documents/Transparency-data/Payments-to-suppliers/Contracts-below-100K.xlsx",
+    "purchase_card_spend": "https://www.towerhamlets.gov.uk/Documents/Transparency-data/Payments-to-suppliers/2025-2026/PCARD-JUL-26-New.csv (monthly, CSV and XLSX)",
+    "grants_data": "https://www.towerhamlets.gov.uk/lgnl/council_and_democracy/Transparency/grants.aspx",
+    "difficulty": "medium",
+    "notes": "Current (July 2026 up on 2026-09-19) and the richest departmental hierarchy after Redbridge. The missing-header case is the main trap."
+  },
+  {
+    "borough": "Waltham Forest",
+    "verified_live": true,
+    "verified_date": "2026-09-19",
+    "landing_page": "https://www.walthamforest.gov.uk/council-and-elections/about-us/council-budgets-and-spending/council-transparency/spending-and-procurement-information/council-spending-above-ps500",
+    "open_data_portal": {
+      "has_portal": true,
+      "platform": "London Datastore (DataPress), but the entry is a stale pointer with no files",
+      "dataset_id": "waltham-forest-council-transparency-2jrpl (internal id '2jrpl')",
+      "example_api_request": "curl -L 'https://data.london.gov.uk/api/dataset/waltham-forest-council-transparency-2jrpl'  — returns 200 JSON but \"resources\":{} is empty and updatedAt is 2014-07-07",
+      "notes": "The Datastore record is a description pointing at the council website, not a data source. Do not use it. Verified empty on 2026-09-19."
+    },
+    "format": [
+      "XLSX"
+    ],
+    "frequency": "monthly",
+    "threshold": "£500",
+    "earliest_period": "January 2020 per the landing page (2020 files were re-uploaded in 2026-09, so the upload folder is no guide to the period)",
+    "latest_period": "June 2026",
+    "url_pattern": "https://www.walthamforest.gov.uk/sites/default/files/{YYYY-MM upload folder}/{filename}.xlsx  (Drupal)",
+    "predictable_urls": "no; at least three competing conventions coexist — 'June 2026 Transparency Report .xlsx' (note the trailing space before the extension), 'Transparency Report August 2024.xlsx', 'December2024_Transparency Report.xlsx'. Must scrape",
+    "example_file_urls": [
+      "https://www.walthamforest.gov.uk/sites/default/files/2026-08/June%202026%20Transparency%20Report%20.xlsx",
+      "https://www.walthamforest.gov.uk/sites/default/files/2026-07/May%202026%20Transparency%20Report.xlsx",
+      "https://www.walthamforest.gov.uk/sites/default/files/2025-03/Transparency%20Report%20August%202024.xlsx"
+    ],
+    "verified_download": {
+      "url": "https://www.walthamforest.gov.uk/sites/default/files/2026-08/June%202026%20Transparency%20Report%20.xlsx",
+      "http_status": 200,
+      "content_type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+      "bytes": 45149,
+      "rows": 497
+    },
+    "column_headers": [
+      "Supplier Name",
+      "Unique Reference",
+      "Invoice Amount",
+      "Invoice Date",
+      "Payment Date",
+      "Division",
+      "Service",
+      "Subjective"
+    ],
+    "obstacles": [
+      "XLSX only, no CSV",
+      "Filename conventions inconsistent, including a trailing space inside the filename that must survive URL encoding as %20 before '.xlsx'",
+      "Possible completeness concern: the June 2026 file holds 497 rows, against 11,031 rows in Southwark's May 2026 file for a borough of comparable size. Flagging as uncertain — it may be a genuinely narrow extract or a partial one, I did not establish which",
+      "Reference field is a sequence string ('JUN 26/01'), not a transaction number",
+      "No bot blocking seen"
+    ],
+    "contracts_register": "https://www.walthamforest.gov.uk/council-and-elections/about-us/council-budgets-and-spending/council-transparency/other-transparency-information (index page; individual contract files not enumerated in this pass)",
+    "purchase_card_spend": "referenced on the transparency index as corporate procurement card use; direct file not located in this pass",
+    "grants_data": "https://www.walthamforest.gov.uk/sites/default/files/2025-03/Grants%20to%20VCS%20-%20Communities%20and%20Participation%202023-2024%20data.pdf (PDF only)",
+    "difficulty": "medium",
+    "notes": "Fetchable and roughly current (June 2026), but the low row count is the thing to check before trusting the totals."
+  },
+  {
+    "borough": "Wandsworth",
+    "verified_live": true,
+    "verified_date": "2026-09-19",
+    "landing_page": "https://www.wandsworth.gov.uk/the-council/how-the-council-works/council-finances/council-expenditure/",
+    "open_data_portal": {
+      "has_portal": false,
+      "platform": null,
+      "dataset_id": null,
+      "example_api_request": null,
+      "notes": "data.wandsworth.gov.uk does not resolve. There is an open data and transparency section on the main site (https://www.wandsworth.gov.uk/the-council/open-data-and-transparency/council-datasets/additional-datasets/) but it is HTML and PDF, no API."
+    },
+    "format": [
+      "CSV",
+      "PDF"
+    ],
+    "frequency": "monthly",
+    "threshold": "£500",
+    "earliest_period": "January 2019",
+    "latest_period": "July 2026",
+    "url_pattern": "https://www.wandsworth.gov.uk/media/{8-char-hash}/council_expenditure_{month}_{yyyy}.csv  — as with Richmond, the hash is IGNORED and any 8 characters resolve the file from its filename. Verified with a bogus hash; an unpublished month returns 404",
+    "predictable_urls": "yes, effectively; construct from the month name with a placeholder hash",
+    "example_file_urls": [
+      "https://www.wandsworth.gov.uk/media/fmcmcqen/council_expenditure_july_2026.csv",
+      "https://www.wandsworth.gov.uk/media/xxxxxxxx/council_expenditure_july_2026.csv",
+      "https://www.wandsworth.gov.uk/media/aguhwjzi/council_expenditure_december_2025.csv"
+    ],
+    "verified_download": {
+      "url": "https://www.wandsworth.gov.uk/media/fmcmcqen/council_expenditure_july_2026.csv",
+      "http_status": 200,
+      "content_type": "text/csv",
+      "bytes": 478921
+    },
+    "column_headers": [
+      "Directorate",
+      "Payment Date",
+      "Payment Amount",
+      "Payee",
+      "Supplier No",
+      "Activity"
+    ],
+    "obstacles": [
+      "UTF-8 BOM at the start of the file",
+      "Amounts quoted with thousands separators",
+      "Same year-to-year header-case and date-format drift as Richmond should be expected on older files",
+      "404 for a missing month returns a ~48 KB HTML body, so check the status code",
+      "No bot blocking seen"
+    ],
+    "contracts_register": "not located during this pass",
+    "purchase_card_spend": "no procurement card file found on the expenditure page, unlike Richmond",
+    "grants_data": "grants are reported through committee papers: https://democracy.wandsworth.gov.uk/ieListMeetings.aspx?CommitteeId=510 (not structured data)",
+    "difficulty": "easy",
+    "shared_system_with": "Richmond upon Thames",
+    "notes": "91 monthly CSVs listed on the page, January 2019 through July 2026, plus a PDF for each month. Confirmed to share a publication system with Richmond: same CMS, same URL scheme, same filenames, same headers, same start date, separate media stores so each host serves its own borough's data."
+  },
+  {
+    "borough": "Westminster",
+    "verified_live": true,
+    "verified_date": "2026-09-19",
+    "landing_page": "https://www.westminster.gov.uk/about-council/transparency/spending-procurement-and-data-transparency/expenditure-over-ps500",
+    "open_data_portal": {
+      "has_portal": false,
+      "platform": null,
+      "dataset_id": null,
+      "example_api_request": null,
+      "notes": "Neither data.westminster.gov.uk nor opendata.westminster.gov.uk resolves. data.gov.uk holds a pointer record (7922f997-6517-4fdd-bd8b-cd3c49f98176) but the files live on westminster.gov.uk."
+    },
+    "format": [
+      "CSV"
+    ],
+    "frequency": "quarterly, not monthly",
+    "threshold": "£500",
+    "earliest_period": "Q1 2021/22",
+    "latest_period": "Q1 2026/27 (April to June 2026)",
+    "url_pattern": "https://www.westminster.gov.uk/media/document/q{N}-{yyyy}-{yy}-expenditure-over-%C2%A3500  — no file extension, served as text/csv. Older years insert a triple hyphen: q1-2024-25---expenditure-over-%C2%A3500",
+    "predictable_urls": "semi-predictable; the recent form is stable but the triple-hyphen variant in 2024/25 means a scraper should read the landing page rather than assume",
+    "example_file_urls": [
+      "https://www.westminster.gov.uk/media/document/q1-2026-27-expenditure-over-%C2%A3500",
+      "https://www.westminster.gov.uk/media/document/q4-2025-26-expenditure-over-%C2%A3500",
+      "https://www.westminster.gov.uk/media/document/q1-2024-25---expenditure-over-%C2%A3500"
+    ],
+    "verified_download": {
+      "url": "https://www.westminster.gov.uk/media/document/q1-2026-27-expenditure-over-%C2%A3500",
+      "http_status": 200,
+      "content_type": "text/csv; charset=utf-8",
+      "bytes": 2460450
+    },
+    "column_headers": [
+      "Posting date",
+      "Supplier number",
+      "Supplier name",
+      "Expense type",
+      "Department",
+      "Amount"
+    ],
+    "obstacles": [
+      "URL has no file extension; infer format from the Content-Type header",
+      "The £ in the URL must be percent-encoded as %C2%A3",
+      "Quarterly cadence means up to a four-month lag on the most recent month",
+      "Thinnest schema in this set: six columns, no transaction number and no cost centre, so deduplication across quarters is harder",
+      "UTF-8 BOM; amounts quoted with thousands separators",
+      "No bot blocking seen"
+    ],
+    "contracts_register": "https://www.westminster.gov.uk/about-council/transparency-hub/our-spending-and-finances/spending-procurement-and-data-transparency/contracts-over-ps5000 (plus invitations to tender at .../invitation-tender-contracts-over-ps5000)",
+    "purchase_card_spend": "https://www.westminster.gov.uk/about-council/transparency/spending-procurement-and-data-transparency/procurement-card-transactions",
+    "grants_data": "not found on the transparency hub",
+    "difficulty": "easy",
+    "notes": "Only quarterly publisher of the eleven, and only back to 2021/22, so the shallowest history. The files themselves are clean CSV and current."
+  }
+]

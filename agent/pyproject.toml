@@ -1,0 +1,11 @@
+[project]
+name = "spend-agent"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.141.1",
+    "pydantic-ai-slim[google,ui]>=2.46.0",
+    "uvicorn>=0.53.0",
+]
