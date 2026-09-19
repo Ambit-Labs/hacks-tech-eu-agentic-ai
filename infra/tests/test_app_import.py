@@ -27,7 +27,7 @@ def app_module(tmp_path_factory):
     saved["MODAL_CONFIG_PATH"] = os.environ.get("MODAL_CONFIG_PATH")
     os.environ["MODAL_CONFIG_PATH"] = str(missing)
     try:
-        import spend_infra.postgres_app as module
+        import scrooge_infra.postgres_app as module
 
         yield module
     finally:
@@ -40,7 +40,7 @@ def app_module(tmp_path_factory):
 
 def test_app_exists_and_is_named(app_module):
     assert isinstance(app_module.app, modal.App)
-    assert app_module.app.name == "spend-postgres"
+    assert app_module.app.name == "scrooge-postgres"
 
 
 @pytest.mark.parametrize("name", ["server", "supervisor", "archives"])
@@ -64,8 +64,8 @@ def test_pgdata_is_not_on_the_volume(app_module):
 
 
 def test_handles_are_the_named_ones(app_module):
-    assert app_module.volume.name == "spend-postgres-data"
-    assert app_module.endpoint_dict.name == "spend-postgres-endpoint"
+    assert app_module.volume.name == "scrooge-postgres-data"
+    assert app_module.endpoint_dict.name == "scrooge-postgres-endpoint"
 
 
 def test_pg_hba_and_listen_addresses_are_what_a_tunnel_needs(app_module):

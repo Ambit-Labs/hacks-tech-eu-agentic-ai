@@ -7,7 +7,7 @@ import logging
 import httpx
 import pytest
 
-from spend_indexer.boroughs.bexley import Bexley, expenditure_sections, link_period
+from scrooge_indexer.boroughs.bexley import Bexley, expenditure_sections, link_period
 
 #: Trimmed from the live page on 2026-09-19, keeping the heading structure
 #: intact: a year heading introduces that year's expenditure files and a
@@ -122,7 +122,7 @@ def test_a_label_that_contradicts_its_own_file_is_left_alone(client_for, caplog)
     of 2017. The link is counted and skipped, and April to June 2017 stays
     missing, because Bexley does not currently link it anywhere.
     """
-    with caplog.at_level(logging.WARNING, logger="spend_indexer.boroughs.bexley"):
+    with caplog.at_level(logging.WARNING, logger="scrooge_indexer.boroughs.bexley"):
         files = Bexley().discover(client_for(landing_handler), None, None)
     assert not any("April-to-December-2018" in f.url for f in files)
     assert not any(f.period.startswith("2017") for f in files)
@@ -178,7 +178,7 @@ def test_an_undated_link_is_counted_not_guessed_at(client_for, caplog):
             headers={"Content-Type": "text/html"},
         )
 
-    with caplog.at_level(logging.WARNING, logger="spend_indexer.boroughs.bexley"):
+    with caplog.at_level(logging.WARNING, logger="scrooge_indexer.boroughs.bexley"):
         files = Bexley().discover(client_for(handler), None, None)
     assert [f.period for f in files] == ["2026-07"]
     assert "skipped 1 link(s)" in caplog.text

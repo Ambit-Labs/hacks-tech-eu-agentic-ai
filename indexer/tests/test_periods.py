@@ -6,7 +6,7 @@ from datetime import date
 
 import pytest
 
-from spend_indexer.boroughs.base import (
+from scrooge_indexer.boroughs.base import (
     calendar_quarter_period,
     current_month,
     filter_files,
@@ -29,7 +29,7 @@ from spend_indexer.boroughs.base import (
     range_period,
     shift_month,
 )
-from spend_indexer.models import RemoteFile
+from scrooge_indexer.models import RemoteFile
 
 
 @pytest.mark.parametrize(

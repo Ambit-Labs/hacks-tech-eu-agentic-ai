@@ -4,7 +4,7 @@ Adding a borough must not mean editing a list. Several people extend this
 package at the same time and a shared registry file would be a merge conflict
 on every pull request, so the registry is a directory scan instead: drop
 ``hackney.py`` in here with a :class:`~.base.Source` subclass in it and
-``spend list`` shows Hackney.
+``scrooge list`` shows Hackney.
 
 A module that fails to import is reported, not fatal. One contributor's typo
 should not stop the other thirty boroughs from downloading.

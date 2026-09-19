@@ -5,10 +5,10 @@ from __future__ import annotations
 import httpx
 import pytest
 
-from spend_indexer.boroughs import _umbraco
-from spend_indexer.boroughs.richmond import Richmond
-from spend_indexer.boroughs.wandsworth import Wandsworth
-from spend_indexer.http import NotPublished, download_to
+from scrooge_indexer.boroughs import _umbraco
+from scrooge_indexer.boroughs.richmond import Richmond
+from scrooge_indexer.boroughs.wandsworth import Wandsworth
+from scrooge_indexer.http import NotPublished, download_to
 
 LANDING = """
 <html><body>

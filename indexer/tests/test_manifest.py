@@ -4,8 +4,8 @@ from __future__ import annotations
 
 import pytest
 
-from spend_indexer import manifest
-from spend_indexer.models import RemoteFile
+from scrooge_indexer import manifest
+from scrooge_indexer.models import RemoteFile
 
 
 @pytest.mark.parametrize(

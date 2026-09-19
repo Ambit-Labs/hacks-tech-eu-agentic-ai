@@ -5,9 +5,9 @@ from __future__ import annotations
 import httpx
 import pytest
 
-from spend_indexer.boroughs.base import filter_files
-from spend_indexer.boroughs.hounslow import Hounslow, resource_period
-from spend_indexer.http import NotPublished
+from scrooge_indexer.boroughs.base import filter_files
+from scrooge_indexer.boroughs.hounslow import Hounslow, resource_period
+from scrooge_indexer.http import NotPublished
 
 BUILD = "PTSbv9Gst0ETBizzaJIsa"
 

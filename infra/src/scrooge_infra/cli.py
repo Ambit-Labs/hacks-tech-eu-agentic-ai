@@ -1,6 +1,6 @@
 """The ``pg`` command: start the Modal Postgres, find it, connect to it.
 
-argparse with one subparser per verb, the same shape as ``spend`` in
+argparse with one subparser per verb, the same shape as ``scrooge`` in
 ``indexer/``. Results go to stdout so ``$(pg url)`` works and a table can be
 piped; progress and diagnostics go to stderr so the pipe stays clean.
 
@@ -48,10 +48,10 @@ EXIT_USAGE = 2
 EXIT_INTERRUPTED = 130
 
 #: Env var holding the postgres superuser password on a client machine.
-ENV_PASSWORD = "SPEND_PG_PASSWORD"
+ENV_PASSWORD = "SCROOGE_PG_PASSWORD"
 
 #: Env var overriding the dump interval `pg start` asks the server for.
-ENV_DUMP_INTERVAL = "SPEND_PG_DUMP_INTERVAL"
+ENV_DUMP_INTERVAL = "SCROOGE_PG_DUMP_INTERVAL"
 
 #: Keys inside the endpoint Dict, mirrored from postgres_app so the CLI does
 #: not import the app module and therefore does not need the Modal image.
@@ -63,7 +63,7 @@ START_TIMEOUT = 900
 STOP_TIMEOUT = 300
 REQUEST_TIMEOUT = 900
 
-MODULE = "spend_infra.postgres_app"
+MODULE = "scrooge_infra.postgres_app"
 
 
 class CommandError(Exception):
@@ -328,7 +328,7 @@ def cmd_psql(args: argparse.Namespace, out: Console, err: Console) -> int:
     if binary is None:
         err.print("psql is not on PATH. Install postgresql-client, then run:")
         out.print(
-            f"PGPASSWORD=$SPEND_PG_PASSWORD psql -h {endpoint.host} "
+            f"PGPASSWORD=$SCROOGE_PG_PASSWORD psql -h {endpoint.host} "
             f"-p {endpoint.port} -U {PG_USER} -d {args.database}"
         )
         return EXIT_FAILURES

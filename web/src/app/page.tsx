@@ -10,7 +10,7 @@ export default function Home() {
       <header className="flex items-center justify-between gap-3 border-b px-4 py-3 sm:px-6">
         <div className="flex items-center gap-2">
           <WrenchIcon className="size-4 text-muted-foreground" />
-          <span className="font-semibold text-sm tracking-tight">Toolbelt</span>
+          <span className="font-semibold text-sm tracking-tight">Scrooge</span>
         </div>
         <Badge className="font-mono text-xs" variant="secondary">
           {CHAT_MODEL_LABEL}

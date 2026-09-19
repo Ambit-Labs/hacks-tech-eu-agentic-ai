@@ -7,7 +7,7 @@ import logging
 import httpx
 import pytest
 
-from spend_indexer.boroughs.islington import Islington, end_month
+from scrooge_indexer.boroughs.islington import Islington, end_month
 
 MEDIA = (
     "/~/media/sharepoint-lists/public-records/finance/financialmanagement/expenditure"

@@ -13,20 +13,20 @@ from dataclasses import dataclass
 from datetime import UTC, datetime, timedelta
 
 #: Modal App name. Also the first argument to ``modal.Function.from_name``.
-APP_NAME = "spend-postgres"
+APP_NAME = "scrooge-postgres"
 
 #: Volume holding the pg_dump archives. Not the Postgres data directory, see
 #: the persistence section of docs/runbook.md.
-VOLUME_NAME = "spend-postgres-data"
+VOLUME_NAME = "scrooge-postgres-data"
 
 #: Secret carrying POSTGRES_PASSWORD.
-SECRET_NAME = "spend-postgres"
+SECRET_NAME = "scrooge-postgres"
 
 #: Key the secret must define.
 PASSWORD_KEY = "POSTGRES_PASSWORD"
 
 #: Dict the running server publishes its address into.
-ENDPOINT_DICT_NAME = "spend-postgres-endpoint"
+ENDPOINT_DICT_NAME = "scrooge-postgres-endpoint"
 
 #: The single key inside that Dict.
 ENDPOINT_KEY = "current"

@@ -7,9 +7,9 @@ from urllib.parse import parse_qs, urlsplit
 import httpx
 import pytest
 
-from spend_indexer.boroughs import camden
-from spend_indexer.boroughs.camden import Camden
-from spend_indexer.http import NotPublished, part_path
+from scrooge_indexer.boroughs import camden
+from scrooge_indexer.boroughs.camden import Camden
+from scrooge_indexer.http import NotPublished, part_path
 
 AGGREGATE = [
     {"m": "2026-06-01T00:00:00.000", "n": "5252"},
@@ -120,7 +120,7 @@ def test_fetch_cleans_up_the_part_when_a_later_page_fails(
 
 
 def _remote():
-    from spend_indexer.models import RemoteFile
+    from scrooge_indexer.models import RemoteFile
 
     return RemoteFile(
         borough="camden",

@@ -11,14 +11,14 @@ import io
 import pytest
 from rich.console import Console
 
-from spend_infra.cli import (
+from scrooge_infra.cli import (
     ENV_PASSWORD,
     CommandError,
     build_parser,
     resolve_password,
 )
-from spend_infra.endpoint import build_url
-from spend_infra.progress import Waiter, out_console, waiting
+from scrooge_infra.endpoint import build_url
+from scrooge_infra.progress import Waiter, out_console, waiting
 
 
 @pytest.fixture
@@ -107,7 +107,7 @@ def test_password_missing_names_the_secret(monkeypatch):
     with pytest.raises(CommandError) as caught:
         resolve_password(None)
     message = str(caught.value)
-    assert ENV_PASSWORD in message and "spend-postgres" in message
+    assert ENV_PASSWORD in message and "scrooge-postgres" in message
 
 
 # -- progress --------------------------------------------------------------- #

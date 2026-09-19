@@ -15,9 +15,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Toolbelt",
-  description:
-    "A small chat agent that answers with tool calls for arithmetic, time zones and dice rolls.",
+  title: "Scrooge",
+  description: "Where did the money go?",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

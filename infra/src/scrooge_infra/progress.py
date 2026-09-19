@@ -5,7 +5,7 @@ console is not a terminal, so a ``pg start`` under cron would be silent for
 the two minutes the image takes to build. :class:`Waiter` presents one API
 and picks the renderer from ``console.is_terminal``.
 
-Same split as ``spend_indexer.progress``, narrowed to the one shape this CLI
+Same split as ``scrooge_indexer.progress``, narrowed to the one shape this CLI
 needs: these waits have no total to count against, only elapsed time and a
 line of status.
 """

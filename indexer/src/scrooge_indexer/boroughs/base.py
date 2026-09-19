@@ -72,7 +72,7 @@ class Source(ABC):
 
     access: ClassVar[str]
     """How the files are reached: ``socrata-api``, ``datapress-api``,
-    ``url-pattern``, ``scrape``. Shown by ``spend list`` so an operator can
+    ``url-pattern``, ``scrape``. Shown by ``scrooge list`` so an operator can
     see at a glance which boroughs will break when a CMS is rebuilt."""
 
     landing_page: ClassVar[str]

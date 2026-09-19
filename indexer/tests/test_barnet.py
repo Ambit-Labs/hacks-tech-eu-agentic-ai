@@ -5,7 +5,7 @@ from __future__ import annotations
 import httpx
 import pytest
 
-from spend_indexer.boroughs.barnet import (
+from scrooge_indexer.boroughs.barnet import (
     KNOWN_PACKAGES,
     Barnet,
     resource_period,

@@ -64,7 +64,7 @@ PG_PORT = 5432
 #: is killed 24 hours from now, and the supervisor starts a fresh one.
 MAX_TIMEOUT = 24 * 60 * 60
 
-#: Seconds between dumps, overridable per run and by SPEND_PG_DUMP_INTERVAL.
+#: Seconds between dumps, overridable per run and by SCROOGE_PG_DUMP_INTERVAL.
 DEFAULT_DUMP_INTERVAL = 600
 
 #: How often the main loop wakes to check for a stop request or a dead
@@ -93,7 +93,7 @@ CONTROL_KEY = "control"
 #: and `pg restore` poll it for their own request id.
 RESULT_KEY = "last_request"
 
-DUMP_PREFIX = "spend-postgres-"
+DUMP_PREFIX = "scrooge-postgres-"
 DUMP_SUFFIX = ".sql.gz"
 
 # --------------------------------------------------------------------------- #
@@ -109,7 +109,7 @@ image = (
     modal.Image.from_registry("postgres:17", add_python="3.12")
     .entrypoint([])
     .pip_install("modal>=1.5.5,<2")
-    .add_local_python_source("spend_infra")
+    .add_local_python_source("scrooge_infra")
 )
 
 app = modal.App(APP_NAME, image=image)
@@ -174,7 +174,7 @@ def _write_conf() -> None:
     conf = PGDATA / "postgresql.conf"
     conf.write_text(
         conf.read_text()
-        + "\n# spend-infra overrides\n"
+        + "\n# scrooge-infra overrides\n"
         + f"listen_addresses = '*'\nport = {PG_PORT}\n"
         + "password_encryption = 'scram-sha-256'\n"
         + "max_connections = 100\n"
@@ -606,7 +606,7 @@ def supervisor() -> str:
 
 @app.local_entrypoint()
 def main() -> None:
-    """Print where the server is. `modal run -m spend_infra.postgres_app`.
+    """Print where the server is. `modal run -m scrooge_infra.postgres_app`.
 
     The same answer `pg status` gives, without needing this project
     installed as a console script.
@@ -621,7 +621,7 @@ def main() -> None:
     print(f"started_at  {endpoint.started_at.isoformat()}{stale}")
     print(f"container   {endpoint.container_id}")
     print(
-        f"url         postgresql://{PG_USER}:$SPEND_PG_PASSWORD@"
+        f"url         postgresql://{PG_USER}:$SCROOGE_PG_PASSWORD@"
         f"{endpoint.address}/{PG_DATABASE}",
         file=sys.stdout,
     )

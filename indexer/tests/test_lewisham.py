@@ -7,7 +7,7 @@ import logging
 import httpx
 import pytest
 
-from spend_indexer.boroughs.lewisham import Lewisham, candidate_url, holes
+from scrooge_indexer.boroughs.lewisham import Lewisham, candidate_url, holes
 
 MEDIA = "/-/media/mayor-and-council/about-us/finances/spending-over-250"
 
@@ -104,7 +104,7 @@ def test_the_ashx_archive_is_left_alone(client_for):
 
 
 def test_a_link_with_no_month_is_counted_not_guessed_at(client_for, caplog):
-    with caplog.at_level(logging.WARNING, logger="spend_indexer.boroughs.lewisham"):
+    with caplog.at_level(logging.WARNING, logger="scrooge_indexer.boroughs.lewisham"):
         Lewisham().discover(client_for(landing_handler), None, None)
     assert "skipped 1 data link(s)" in caplog.text
 

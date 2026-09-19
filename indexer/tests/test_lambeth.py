@@ -7,7 +7,7 @@ import logging
 import httpx
 import pytest
 
-from spend_indexer.boroughs.lambeth import Lambeth, parse_period_for
+from scrooge_indexer.boroughs.lambeth import Lambeth, parse_period_for
 
 FILES = "https://www.lambeth.gov.uk/sites/default/files"
 BETA = "https://beta.lambeth.gov.uk/sites/default/files"

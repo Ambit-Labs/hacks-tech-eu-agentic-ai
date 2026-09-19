@@ -6,7 +6,7 @@ import logging
 
 import httpx
 
-from spend_indexer.boroughs.newham import Newham, clean_label
+from scrooge_indexer.boroughs.newham import Newham, clean_label
 
 #: Ten links trimmed from the live page on 2026-09-19, keeping every shape
 #: that makes the slug untrustworthy.
@@ -115,7 +115,7 @@ def test_a_zero_width_space_does_not_hide_a_month(client_for):
 
 
 def test_an_undated_link_is_counted_not_guessed_at(client_for, caplog):
-    with caplog.at_level(logging.WARNING, logger="spend_indexer.boroughs.newham"):
+    with caplog.at_level(logging.WARNING, logger="scrooge_indexer.boroughs.newham"):
         Newham().discover(client_for(landing_handler), None, None)
     assert "skipped 1 supplier payment link(s)" in caplog.text
 

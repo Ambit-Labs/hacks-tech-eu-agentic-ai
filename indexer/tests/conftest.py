@@ -5,7 +5,7 @@ from __future__ import annotations
 import httpx
 import pytest
 
-from spend_indexer.http import make_client
+from scrooge_indexer.http import make_client
 
 
 @pytest.fixture

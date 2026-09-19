@@ -1,4 +1,4 @@
-# spend-indexer
+# scrooge-indexer
 
 Downloads the spending files London boroughs publish under the transparency
 code (every payment over £500, and over £250 in some boroughs) and saves them
@@ -7,7 +7,7 @@ Richmond puts on its CSVs is still there after the download, because a later
 stage that has to reconcile 33 different schemas needs the original bytes to
 argue with.
 
-One borough is one file in `src/spend_indexer/boroughs/`. Adding the 34th
+One borough is one file in `src/scrooge_indexer/boroughs/`. Adding the 34th
 borough means writing that file and nothing else.
 
 ## Install
@@ -22,13 +22,13 @@ Python 3.12 or newer. Everything else comes from `uv.lock`.
 ## Commands
 
 ```sh
-uv run spend list                     # registered boroughs, and what is on disk
-uv run spend download camden          # one borough, full history
-uv run spend download --all --since 2026-01
-uv run spend status                   # counts, byte totals, failures
+uv run scrooge list                     # registered boroughs, and what is on disk
+uv run scrooge download camden          # one borough, full history
+uv run scrooge download --all --since 2026-01
+uv run scrooge status                   # counts, byte totals, failures
 ```
 
-`spend download` discovers what a borough publishes, then fetches whatever is
+`scrooge download` discovers what a borough publishes, then fetches whatever is
 not already on disk. Re-running is safe and cheap: a file recorded as complete
 in the manifest and still present on disk is skipped without a request.
 
@@ -50,7 +50,7 @@ data/
 ```
 
 The data directory is the repo root `data/` unless `--data-dir` or
-`$SPEND_DATA_DIR` says otherwise, and it is gitignored.
+`$SCROOGE_DATA_DIR` says otherwise, and it is gitignored.
 
 A filename is the period, two underscores, then the publisher's own filename
 with path separators and odd characters stripped. Periods are normalised across
@@ -79,9 +79,9 @@ five quarterly publishers set `quarters = "financial"`, so Q1 is April to June
 and `2026-Q4` covers January to March 2027. A borough that numbers its quarters
 by the calendar year sets `quarters = "calendar"` and gets the same spelling
 with January to March as Q1; `period_bounds()` and `in_range()` take that
-setting, and `spend list` and `spend status` do not, because a manifest records
-periods and not the borough that chose the convention. Nothing on disk is
-affected today.
+setting, and `scrooge list` and `scrooge status` do not, because a manifest
+records periods and not the borough that chose the convention. Nothing on disk
+is affected today.
 
 `manifest.json` records every fetch: URL, period, relative path, bytes, sha256,
 content type, ETag, Last-Modified, timestamp and status. It is rewritten
@@ -118,7 +118,7 @@ quarters and Lambeth's April to December 2017.
 
 ## Adding a borough
 
-Write one file in `src/spend_indexer/boroughs/`. The registry imports every
+Write one file in `src/scrooge_indexer/boroughs/`. The registry imports every
 module in that package and picks up `Source` subclasses, so there is no list to
 edit and no merge conflict with whoever is adding the borough next door.
 
@@ -162,7 +162,7 @@ class Bexley(Source):
         return files
 ```
 
-`uv run spend list` will show Bexley on the next run.
+`uv run scrooge list` will show Bexley on the next run.
 
 What the base class gives you:
 

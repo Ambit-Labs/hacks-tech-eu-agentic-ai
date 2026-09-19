@@ -5,8 +5,8 @@ from __future__ import annotations
 import httpx
 import pytest
 
-from spend_indexer.boroughs.base import filter_files
-from spend_indexer.boroughs.brent import Brent, span_period
+from scrooge_indexer.boroughs.base import filter_files
+from scrooge_indexer.boroughs.brent import Brent, span_period
 
 #: Trimmed ``package_show`` for vq756, one resource from each era: the
 #: financial quarters of today, the four-month file that realigned them, an

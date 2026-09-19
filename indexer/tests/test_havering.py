@@ -6,7 +6,7 @@ import logging
 
 import httpx
 
-from spend_indexer.boroughs.havering import Havering, csv_filename
+from scrooge_indexer.boroughs.havering import Havering, csv_filename
 
 #: The landing page, trimmed to three of its seventeen financial years.
 LANDING = """

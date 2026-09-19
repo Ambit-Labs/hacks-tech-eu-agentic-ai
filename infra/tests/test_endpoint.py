@@ -6,7 +6,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from spend_infra.endpoint import (
+from scrooge_infra.endpoint import (
     PG_DATABASE,
     PG_USER,
     Endpoint,

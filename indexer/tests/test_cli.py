@@ -5,8 +5,8 @@ from __future__ import annotations
 import httpx
 import pytest
 
-from spend_indexer import cli, manifest
-from spend_indexer.boroughs import _umbraco, camden
+from scrooge_indexer import cli, manifest
+from scrooge_indexer.boroughs import _umbraco, camden
 
 CAMDEN_AGGREGATE = [
     {"m": "2026-06-01T00:00:00.000", "n": "3"},
@@ -57,7 +57,7 @@ def offline(monkeypatch, client_for):
 
 def test_download_without_a_borough_is_a_usage_error(capsys):
     assert cli.main(["download"]) == cli.EXIT_USAGE
-    assert "spend list" in capsys.readouterr().err
+    assert "scrooge list" in capsys.readouterr().err
 
 
 def test_an_unknown_borough_is_a_usage_error(capsys, tmp_path):
@@ -219,7 +219,7 @@ def test_ctrl_c_exits_130_and_prints_a_resume_command(
     )
     assert code == cli.EXIT_INTERRUPTED
     err = capsys.readouterr().err
-    assert "spend download camden --since 2026-06" in err
+    assert "scrooge download camden --since 2026-06" in err
     assert "--limit 2" in err
     assert not list(tmp_path.rglob("*.part"))
 

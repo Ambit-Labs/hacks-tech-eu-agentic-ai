@@ -198,7 +198,7 @@ def _last_month(period: str) -> tuple[str, str]:
 
 
 def summarise(data_dir: Path, slug: str) -> dict:
-    """Per-borough numbers for ``spend status`` and ``spend list``."""
+    """Per-borough numbers for ``scrooge status`` and ``scrooge list``."""
     manifest = load(data_dir, slug)
     ok = [e for e in manifest.entries.values() if e.status == "ok"]
     periods = sorted(e.period for e in ok)

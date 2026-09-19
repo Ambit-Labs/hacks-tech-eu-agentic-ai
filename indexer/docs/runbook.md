@@ -1,6 +1,6 @@
-# spend-indexer runbook
+# scrooge-indexer runbook
 
-Operating the `spend` CLI: every command and flag, what a run leaves behind,
+Operating the `scrooge` CLI: every command and flag, what a run leaves behind,
 and how to recover from an interrupted one.
 
 ## Cold start
@@ -8,11 +8,11 @@ and how to recover from an interrupted one.
 ```sh
 cd indexer
 uv sync
-uv run spend list
+uv run scrooge list
 ```
 
 `uv sync` is the whole setup. There are no API keys, no secrets and no
-binaries to install. `uv run spend list` should print the registered boroughs
+binaries to install. `uv run scrooge list` should print the registered boroughs
 with zero files on disk.
 
 Nothing in this tool authenticates anywhere. If a borough ever needs a token
@@ -23,20 +23,20 @@ new environment variable documented here, not a silent addition.
 
 | Variable | Default | What it does |
 | --- | --- | --- |
-| `SPEND_DATA_DIR` | the repo root `data/` | Where files and manifests are written. |
+| `SCROOGE_DATA_DIR` | the repo root `data/` | Where files and manifests are written. |
 
 The data directory resolves in this order: `--data-dir PATH`, then
-`$SPEND_DATA_DIR`, then the repo root `data/` found by walking up from the
+`$SCROOGE_DATA_DIR`, then the repo root `data/` found by walking up from the
 package until a `.git` directory appears, then `./data` if there is no
 checkout. `.env` and `.env.local` in the repo root are loaded if present, and
 never override a variable already set in the shell or the cron line.
 
 ## Commands
 
-### spend list
+### scrooge list
 
 ```
-spend list [--data-dir PATH]
+scrooge list [--data-dir PATH]
 ```
 
 One row per registered borough: slug, council name, access method
@@ -44,16 +44,16 @@ One row per registered borough: slug, council name, access method
 threshold, files already on disk, and the latest period held. The table goes to
 stdout, warnings go to stderr.
 
-### spend download
+### scrooge download
 
 ```
-spend download [SLUG ...] [--all] [--since YYYY-MM] [--until YYYY-MM]
-               [--limit N] [--force] [--data-dir PATH] [--delay SECONDS]
+scrooge download [SLUG ...] [--all] [--since YYYY-MM] [--until YYYY-MM]
+                 [--limit N] [--force] [--data-dir PATH] [--delay SECONDS]
 ```
 
 | Flag | Default | Meaning |
 | --- | --- | --- |
-| `SLUG ...` | none | Boroughs to download, by slug. `spend list` prints them. |
+| `SLUG ...` | none | Boroughs to download, by slug. `scrooge list` prints them. |
 | `--all` | off | Every registered borough. |
 | `--since YYYY-MM` | the borough's earliest period | Skip anything ending before this month. |
 | `--until YYYY-MM` | the current month | Skip anything starting after this month. |
@@ -80,10 +80,10 @@ Exit codes:
 A 404 is not a failure. An unpublished month is recorded with status `missing`
 and the run still exits 0.
 
-### spend status
+### scrooge status
 
 ```
-spend status [--data-dir PATH]
+scrooge status [--data-dir PATH]
 ```
 
 Per-borough counts read from the manifests: files, bytes, earliest and latest
@@ -115,9 +115,9 @@ covers January to March 2027. Every quarterly borough registered today sets
 `quarters = "financial"`, so that reading holds for everything on disk. A
 borough that numbered its quarters by the calendar year would set
 `quarters = "calendar"` and write the same string for January to March;
-`--since` and `--until` honour that setting, while `spend list` and `spend
-status` assume the financial one, because a manifest records a period and not
-the convention behind it.
+`--since` and `--until` honour that setting, while `scrooge list` and
+`scrooge status` assume the financial one, because a manifest records a period
+and not the convention behind it.
 
 A bare year is not a period. Nothing publishes a calendar year, and a
 financial year is a range that says so.
@@ -151,8 +151,8 @@ stderr gets one line before discovery starts, one summary line once the file
 list is known, then progress:
 
 ```
-spend download: camden, richmond, wandsworth · discovering...
-spend download: 3 borough(s) (camden, richmond, wandsworth) · 7 file(s) discovered · 0 already on disk · /repo/data
+scrooge download: camden, richmond, wandsworth · discovering...
+scrooge download: 3 borough(s) (camden, richmond, wandsworth) · 7 file(s) discovered · 0 already on disk · /repo/data
 ```
 
 On a terminal, progress is a Rich bar with done/total, elapsed, ETA and live
@@ -165,7 +165,7 @@ download: 3/7 · ok=3 bytes=4.1MB in 0:00:01
 download: done 7/7 · ok=7 bytes=5.5MB in 0:00:02
 ```
 
-The per-borough summary table goes to stdout at the end, so `spend download
+The per-borough summary table goes to stdout at the end, so `scrooge download
 --all > summary.txt` keeps the table and leaves the progress on the terminal.
 
 ## Resume and recovery
@@ -217,12 +217,12 @@ of silence before a file appears. A monthly cron is still the right schedule
 for all five: it costs one discovery request a month and catches the quarter
 the week it goes up. What it does mean is that a borough showing no new file
 for months is the normal state of a quarterly publisher, not an outage. Check
-`spend status` against the table above before going looking for a fault.
+`scrooge status` against the table above before going looking for a fault.
 
 ```cron
 # 03:17 on the 20th of each month. Two months of overlap so a late
 # publication is not missed, and resume makes the overlap nearly free.
-17 3 20 * * cd /srv/hacks-tech-eu-agentic-ai/indexer && /usr/local/bin/uv run spend download --all --since $(date -d '2 months ago' +\%Y-\%m) >> /var/log/spend-indexer.log 2>&1
+17 3 20 * * cd /srv/hacks-tech-eu-agentic-ai/indexer && /usr/local/bin/uv run scrooge download --all --since $(date -d '2 months ago' +\%Y-\%m) >> /var/log/scrooge-indexer.log 2>&1
 ```
 
 stderr is not a tty under cron, so the log gets plain progress lines rather
@@ -238,7 +238,7 @@ Redbridge alone is roughly 10 MB per month.
 
 This tool identifies itself honestly and does not work around anything.
 
-- The User-Agent is `spend-indexer/0.1 (+research; contact via repo)` on every
+- The User-Agent is `scrooge-indexer/0.1 (+research; contact via repo)` on every
   request. No browser string, no rotation.
 - One request per host per 0.5 s by default. Raise it with `--delay` if a
   council asks.
@@ -268,6 +268,6 @@ is a decision for a person, not something this tool should do quietly.
 Thirteen boroughs have no module here and are not blocked: Bromley, City of
 London, Croydon, Ealing, Hackney, Harrow, Hillingdon, Kingston, Merton,
 Southwark, Sutton, Tower Hamlets and Waltham Forest. Nobody has written them
-yet, which is one file each in `src/spend_indexer/boroughs/`. They are absent
-from `spend list` and from every total, so a count of fifteen is the tool's
+yet, which is one file each in `src/scrooge_indexer/boroughs/`. They are absent
+from `scrooge list` and from every total, so a count of fifteen is the tool's
 coverage and not London's.

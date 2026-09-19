@@ -5,7 +5,7 @@ from __future__ import annotations
 import httpx
 import pytest
 
-from spend_indexer.boroughs.redbridge import Redbridge, fy_span, period_for
+from scrooge_indexer.boroughs.redbridge import Redbridge, fy_span, period_for
 
 INDEX = """
 <html><body>

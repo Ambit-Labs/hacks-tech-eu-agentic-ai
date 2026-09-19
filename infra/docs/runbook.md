@@ -1,6 +1,6 @@
-# spend-infra runbook
+# scrooge-infra runbook
 
-Operating the `pg` CLI and the `spend-postgres` Modal app: cold start, every
+Operating the `pg` CLI and the `scrooge-postgres` Modal app: cold start, every
 command and flag, what a run leaves behind, and how to get the data back when
 something has gone.
 
@@ -47,11 +47,11 @@ put it in Modal, put the same value in your own environment, and never write
 it into a file in this repo.
 
 ```sh
-export SPEND_PG_PASSWORD="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"
-uv run modal secret create spend-postgres POSTGRES_PASSWORD="$SPEND_PG_PASSWORD"
+export SCROOGE_PG_PASSWORD="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"
+uv run modal secret create scrooge-postgres POSTGRES_PASSWORD="$SCROOGE_PG_PASSWORD"
 ```
 
-Add `SPEND_PG_PASSWORD` to your shell profile or to `infra/.env`, which is
+Add `SCROOGE_PG_PASSWORD` to your shell profile or to `infra/.env`, which is
 gitignored. `.env.example` lists the names and no values.
 
 **4. Deploy.**
@@ -78,8 +78,8 @@ status` should print `running`, an address, and `SELECT 1 ok`.
 
 | Variable | Default | What it does |
 | --- | --- | --- |
-| `SPEND_PG_PASSWORD` | unset | Postgres superuser password on the client side. Must equal the `POSTGRES_PASSWORD` key of the Modal secret `spend-postgres`. Used by `pg url`, `pg psql` and the `pg status` reachability check. |
-| `SPEND_PG_DUMP_INTERVAL` | `600` | Seconds between dumps, the interval `pg start` asks the server for. `--dump-interval` wins over it. Floored at 60 by the server. |
+| `SCROOGE_PG_PASSWORD` | unset | Postgres superuser password on the client side. Must equal the `POSTGRES_PASSWORD` key of the Modal secret `scrooge-postgres`. Used by `pg url`, `pg psql` and the `pg status` reachability check. |
+| `SCROOGE_PG_DUMP_INTERVAL` | `600` | Seconds between dumps, the interval `pg start` asks the server for. `--dump-interval` wins over it. Floored at 60 by the server. |
 | `MODAL_TOKEN_ID` | unset | Modal token id. Only needed where there is no `~/.modal.toml`, such as CI. |
 | `MODAL_TOKEN_SECRET` | unset | Modal token secret. Both must be set together. |
 | `MODAL_PROFILE` | `default` | Which section of `~/.modal.toml` to use. |
@@ -101,7 +101,7 @@ seconds when stderr is a pipe.
 pg deploy [--env NAME]
 ```
 
-Wraps `modal deploy -m spend_infra.postgres_app`. Run it after any change to
+Wraps `modal deploy -m scrooge_infra.postgres_app`. Run it after any change to
 `postgres_app.py`. A redeploy does not restart a running server, but it does
 change what the next start runs, and it re-arms the supervisor schedule.
 
@@ -113,7 +113,7 @@ pg start [--dump-interval SECONDS] [--timeout SECONDS] [--no-restore] [--force]
 
 | Flag | Default | Meaning |
 | --- | --- | --- |
-| `--dump-interval` | `600`, or `$SPEND_PG_DUMP_INTERVAL` | Seconds between dumps to the volume. |
+| `--dump-interval` | `600`, or `$SCROOGE_PG_DUMP_INTERVAL` | Seconds between dumps to the volume. |
 | `--timeout` | `900` | How long to wait for an address before giving up. The wait is the image pull, initdb and restore. |
 | `--no-restore` | off | Start on an empty cluster instead of restoring the newest archive. |
 | `--force` | off | Spawn even though a live endpoint is already published. |
@@ -140,7 +140,7 @@ takes a while to dump). The `stopped` state is what keeps the supervisor from
 starting it again five minutes later.
 
 If it hangs past the timeout, kill it the blunt way with `modal app stop
-spend-postgres`, and accept losing anything written since the last dump.
+scrooge-postgres`, and accept losing anything written since the last dump.
 
 ### pg status
 
@@ -163,7 +163,7 @@ pg url [--password PASSWORD] [--no-password] [--database NAME]
 ```
 
 Prints `postgresql://postgres:<password>@host:port/postgres` on stdout. The
-password comes from `--password`, else `$SPEND_PG_PASSWORD`. It is
+password comes from `--password`, else `$SCROOGE_PG_PASSWORD`. It is
 percent-encoded, so a generated password containing `@` or `/` still yields a
 URL that parses. `--no-password` prints the literal `PASSWORD` in its place,
 for pasting into a doc or a ticket.
@@ -214,7 +214,7 @@ archive is the newest.
 ## Persistence
 
 **PGDATA is on the container's local disk at `/pgdata`, not on the Volume.**
-The Volume `spend-postgres-data` is mounted at `/dumps` and holds gzipped
+The Volume `scrooge-postgres-data` is mounted at `/dumps` and holds gzipped
 `pg_dumpall` archives, the newest 8.
 
 The reason is in Modal's own Volume guide: "Volumes are optimized for
@@ -288,7 +288,7 @@ queues rather than running two postmasters against the same archives.
 
 ```sh
 uv run pg status          # exits 1, prints the desired state
-uv run modal app logs spend-postgres
+uv run modal app logs scrooge-postgres
 uv run pg start
 ```
 
@@ -311,7 +311,7 @@ next suspect. See below.
 
 ```sh
 uv run pg restore --list
-uv run pg restore --archive spend-postgres-20260919T101500Z.sql.gz --yes
+uv run pg restore --archive scrooge-postgres-20260919T101500Z.sql.gz --yes
 ```
 
 Only the newest 8 archives are kept, so at the default 10 minute interval
@@ -319,10 +319,10 @@ that is about 80 minutes of history. Copy one off the volume before it ages
 out if you need it longer:
 
 ```sh
-uv run modal volume get spend-postgres-data spend-postgres-20260919T101500Z.sql.gz .
+uv run modal volume get scrooge-postgres-data scrooge-postgres-20260919T101500Z.sql.gz .
 ```
 
-`modal volume ls spend-postgres-data` lists the same files from outside.
+`modal volume ls scrooge-postgres-data` lists the same files from outside.
 
 ### Starting over from a specific archive
 
@@ -340,8 +340,8 @@ The password is stored in two places that have to agree: the Modal secret,
 and the role in the running cluster. Rotate both:
 
 ```sh
-export SPEND_PG_PASSWORD="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"
-uv run modal secret create spend-postgres POSTGRES_PASSWORD="$SPEND_PG_PASSWORD" --force
+export SCROOGE_PG_PASSWORD="$(python3 -c 'import secrets; print(secrets.token_urlsafe(32))')"
+uv run modal secret create scrooge-postgres POSTGRES_PASSWORD="$SCROOGE_PG_PASSWORD" --force
 uv run pg stop
 uv run pg start
 ```
@@ -374,13 +374,13 @@ Run from the devsicap box against workspace `ambit-labs`, Postgres 17.11.
 | `pg dump` | 6 s round trip, 1.2 KB archive on an empty cluster. |
 | `pg restore --list` | 8 s, lists the archive from a separate container. |
 | `pg stop` | 6 to 12 s, including the final dump. |
-| `pg start` 2.5 minutes after `pg stop` | 9 s. New container, `initdb`, `restoring spend-postgres-...` in the log, restore finished in 0.6 s, and the row written before the stop was back. This is the path the archives exist for. |
+| `pg start` 2.5 minutes after `pg stop` | 9 s. New container, `initdb`, `restoring scrooge-postgres-...` in the log, restore finished in 0.6 s, and the row written before the stop was back. This is the path the archives exist for. |
 | `pg start` within a minute of `pg stop` | 3 s. The log says `PGDATA reused`: Modal handed back the same warm container, the data directory was intact, and no restore ran. The row written before the stop was still there. |
 
 A warm restart therefore proves nothing about the archives. To exercise the
 restore path, wait a few minutes after `pg stop` so the container is
-reclaimed, then `pg start` and look for `restoring spend-postgres-...` in
-`modal app logs spend-postgres`.
+reclaimed, then `pg start` and look for `restoring scrooge-postgres-...` in
+`modal app logs scrooge-postgres`.
 
 One bug came out of the live run. `pg url` through a pipe folded the URL at
 80 columns, so `$(pg url)` produced a database name with a newline in it.
@@ -464,7 +464,7 @@ uses the second and third together:
   lookup", scoped by app name and function name, and this "is exclusively
   supported for deployed applications and will fail if the application is
   ephemeral". That is what `pg start` does: `modal.Function.from_name(
-  "spend-postgres", "server").spawn(...)`.
+  "scrooge-postgres", "server").spawn(...)`.
 - A `modal.Period` schedule, for re-launching. `supervisor` runs every five
   minutes and spawns a replacement when the desired state says running and
   the heartbeat has stopped.

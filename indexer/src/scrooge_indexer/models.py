@@ -52,7 +52,7 @@ class RemoteFile(BaseModel):
       years, whole financial years and off-cycle quarters, and a file covering
       September 2010 to March 2011 is ``2010-09_2011-03`` rather than a month
       that understates it. Build one with
-      :func:`~spend_indexer.boroughs.base.range_period`, which collapses a
+      :func:`~scrooge_indexer.boroughs.base.range_period`, which collapses a
       one-month span back to a month.
     * ``YYYY-Qn`` for a quarterly file, where ``n`` is the quarter number the
       borough itself prints on the file and ``YYYY`` is the year it labels that
@@ -62,8 +62,8 @@ class RemoteFile(BaseModel):
       calendar year gets calendar quarters under the same spelling. Each
       council is internally consistent, so ``2026-Q1 < 2026-Q4`` is always
       chronological within one borough. Use
-      :func:`~spend_indexer.boroughs.base.fy_quarter_period` or
-      :func:`~spend_indexer.boroughs.base.calendar_quarter_period` so the
+      :func:`~scrooge_indexer.boroughs.base.fy_quarter_period` or
+      :func:`~scrooge_indexer.boroughs.base.calendar_quarter_period` so the
       choice is explicit at the call site.
 
     There is no bare ``YYYY``. An annual file is a range and says which twelve

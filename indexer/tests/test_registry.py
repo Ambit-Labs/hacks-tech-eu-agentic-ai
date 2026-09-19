@@ -7,8 +7,8 @@ from pathlib import Path
 
 import pytest
 
-from spend_indexer import boroughs
-from spend_indexer.boroughs import base
+from scrooge_indexer import boroughs
+from scrooge_indexer.boroughs import base
 
 PACKAGE_DIR = Path(base.__file__).parent
 

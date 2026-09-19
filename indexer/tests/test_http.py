@@ -5,7 +5,7 @@ from __future__ import annotations
 import httpx
 import pytest
 
-from spend_indexer.http import (
+from scrooge_indexer.http import (
     Blocked,
     FetchError,
     NotPublished,
@@ -14,7 +14,7 @@ from spend_indexer.http import (
     part_path,
     request_with_retries,
 )
-from spend_indexer.models import RemoteFile
+from scrooge_indexer.models import RemoteFile
 
 
 def _remote(url="https://example.invalid/a.csv", **kwargs) -> RemoteFile:
@@ -37,7 +37,7 @@ def test_user_agent_names_the_tool(client_for):
 
     client = client_for(handler)
     request_with_retries(client, "GET", "https://example.invalid/")
-    assert seen["ua"].startswith("spend-indexer/")
+    assert seen["ua"].startswith("scrooge-indexer/")
     assert "Mozilla" not in seen["ua"]
 
 

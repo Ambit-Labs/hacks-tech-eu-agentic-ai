@@ -1,4 +1,4 @@
-# spend-infra
+# scrooge-infra
 
 Postgres 17 running on Modal, for the parsed spending rows that `indexer/`
 downloads and that `agent/` and `web/` query. Modal sells no managed
@@ -42,7 +42,7 @@ export DATABASE_URL="$(uv run pg url)"
 
 `PGDATA` lives on the container's local disk, not on the Volume. Modal
 documents Volumes as optimised for write-once, read-many workloads, which is
-not what a Postgres heap does to a file. The Volume `spend-postgres-data`
+not what a Postgres heap does to a file. The Volume `scrooge-postgres-data`
 instead holds gzipped `pg_dumpall` archives: the server restores the newest
 one at boot, dumps every 10 minutes, and dumps once more on SIGTERM before
 `pg_ctl stop -m fast`.
@@ -76,7 +76,7 @@ a production credential and keep it out of the repo.
 ## Layout
 
 ```
-src/spend_infra/
+src/scrooge_infra/
   postgres_app.py   the Modal app: image, volume, server, supervisor, archives
   cli.py            the pg command
   endpoint.py       URL building, Dict payload parsing, uptime, staleness

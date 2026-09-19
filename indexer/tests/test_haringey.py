@@ -6,7 +6,7 @@ import logging
 
 import httpx
 
-from spend_indexer.boroughs.haringey import Haringey, parse_quarter
+from scrooge_indexer.boroughs.haringey import Haringey, parse_quarter
 
 #: Trimmed from the live page on 2026-09-19. Kept: the PDF twin that must not
 #: be picked up, the two upload months that would misdate the series, the

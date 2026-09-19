@@ -12,12 +12,12 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
-ENV_DATA_DIR = "SPEND_DATA_DIR"
+ENV_DATA_DIR = "SCROOGE_DATA_DIR"
 
 #: Sent on every request. Honest about what the tool is and where it came from,
 #: because the alternative (a copied browser string) is exactly the evasion this
 #: project refuses to do. A council that wants to block us must be able to.
-USER_AGENT = "spend-indexer/0.1 (+research; contact via repo)"
+USER_AGENT = "scrooge-indexer/0.1 (+research; contact via repo)"
 
 #: Seconds to wait between two requests to the same host. Councils serve these
 #: files from ordinary CMS boxes, and a monthly backfill is ~90 files per
@@ -70,7 +70,7 @@ def load_env(start: Path | None = None) -> None:
 
 
 def resolve_data_dir(override: str | Path | None = None) -> Path:
-    """``--data-dir PATH`` then ``$SPEND_DATA_DIR`` then ``<repo>/data``.
+    """``--data-dir PATH`` then ``$SCROOGE_DATA_DIR`` then ``<repo>/data``.
 
     Falls back to ``./data`` when the package is installed outside a checkout,
     which is the only case where there is no repo root to anchor to.

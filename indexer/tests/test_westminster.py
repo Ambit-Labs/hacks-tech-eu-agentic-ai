@@ -7,10 +7,10 @@ import logging
 import httpx
 import pytest
 
-from spend_indexer import manifest
-from spend_indexer.boroughs import westminster
-from spend_indexer.boroughs.base import period_bounds
-from spend_indexer.boroughs.westminster import Westminster, file_url, parse_quarter
+from scrooge_indexer import manifest
+from scrooge_indexer.boroughs import westminster
+from scrooge_indexer.boroughs.base import period_bounds
+from scrooge_indexer.boroughs.westminster import Westminster, file_url, parse_quarter
 
 POUND = "%C2%A3"
 
@@ -133,7 +133,7 @@ def test_a_label_with_no_quarter_is_counted_not_guessed_at(client_for, caplog):
         )
         return httpx.Response(200, text=page, headers={"Content-Type": "text/html"})
 
-    with caplog.at_level(logging.WARNING, logger="spend_indexer.boroughs.westminster"):
+    with caplog.at_level(logging.WARNING, logger="scrooge_indexer.boroughs.westminster"):
         files = Westminster().discover(client_for(handler), None, None)
     assert "skipped 1 expenditure link(s)" in caplog.text
     assert "2026-Q1" not in {f.period for f in files}

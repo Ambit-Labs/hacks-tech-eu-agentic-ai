@@ -56,7 +56,7 @@ def fy_overlaps(start_year: int, since: str | None, until: str | None) -> bool:
     """Does financial year ``start_year`` hold any month in ``[since, until]``?
 
     Overlap rather than containment, for the same reason
-    :func:`~spend_indexer.boroughs.base.in_range` uses it: ``--since 2026-03``
+    :func:`~scrooge_indexer.boroughs.base.in_range` uses it: ``--since 2026-03``
     must still open the 2025-26 page that holds March 2026.
     """
     first, last = month_period(start_year, 4), month_period(start_year + 1, 3)

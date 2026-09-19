@@ -1,4 +1,4 @@
-"""The ``spend`` command: list boroughs, download their files, report on disk.
+"""The ``scrooge`` command: list boroughs, download their files, report on disk.
 
 argparse with one subparser per verb, the same shape as the other CLIs in this
 family. Tables go to stdout so they can be piped; progress and diagnostics go
@@ -45,7 +45,7 @@ class BoroughOutcome:
 
 
 # --------------------------------------------------------------------------- #
-# spend list
+# scrooge list
 # --------------------------------------------------------------------------- #
 
 
@@ -72,7 +72,7 @@ def cmd_list(args: argparse.Namespace, out: Console, err: Console) -> int:
 
 
 # --------------------------------------------------------------------------- #
-# spend status
+# scrooge status
 # --------------------------------------------------------------------------- #
 
 
@@ -116,7 +116,7 @@ def cmd_status(args: argparse.Namespace, out: Console, err: Console) -> int:
 
 
 # --------------------------------------------------------------------------- #
-# spend download
+# scrooge download
 # --------------------------------------------------------------------------- #
 
 
@@ -167,7 +167,7 @@ def cmd_download(args: argparse.Namespace, out: Console, err: Console) -> int:
     data_dir = resolve_data_dir(args.data_dir)
     slugs = ", ".join(s.slug for s in sources)
     err.print(
-        f"spend download: {slugs} · discovering...",
+        f"scrooge download: {slugs} · discovering...",
         highlight=False,
         markup=False,
         soft_wrap=True,
@@ -199,7 +199,7 @@ def cmd_download(args: argparse.Namespace, out: Console, err: Console) -> int:
         # markup=False: a borough list in square brackets would be eaten as
         # Rich markup, and soft_wrap keeps the summary on one line.
         err.print(
-            f"spend download: {len(sources)} borough(s) ({slugs}) · "
+            f"scrooge download: {len(sources)} borough(s) ({slugs}) · "
             f"{total} file(s) discovered · {already} already on disk · "
             f"{data_dir}",
             highlight=False,
@@ -370,7 +370,7 @@ def _resume_command(args: argparse.Namespace) -> str:
     ``--force`` is deliberately dropped: files already fetched under it are on
     disk, and repeating it would refetch them.
     """
-    parts = ["spend download"]
+    parts = ["scrooge download"]
     parts.append("--all" if args.all else " ".join(args.slugs))
     for flag, value in (
         ("--since", args.since),
@@ -398,13 +398,13 @@ def _warn_import_errors(err: Console) -> None:
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="spend",
+        prog="scrooge",
         description=(
             "Download London borough council spending files (payments over "
             "£250/£500) and keep them raw on disk."
         ),
     )
-    parser.add_argument("--version", action="version", version=f"spend {__version__}")
+    parser.add_argument("--version", action="version", version=f"scrooge {__version__}")
     sub = parser.add_subparsers(dest="command", required=True, metavar="COMMAND")
 
     p_list = sub.add_parser("list", help="registered boroughs and what is on disk")
@@ -475,9 +475,9 @@ def main(argv: list[str] | None = None) -> int:
         if not args.slugs and not args.all:
             err.print(
                 "nothing to download. Name one or more boroughs, or pass --all:\n"
-                "  spend download camden richmond\n"
-                "  spend download --all --since 2026-01\n"
-                "  spend list   # to see the registered slugs",
+                "  scrooge download camden richmond\n"
+                "  scrooge download --all --since 2026-01\n"
+                "  scrooge list   # to see the registered slugs",
                 highlight=False,
             )
             return EXIT_USAGE
