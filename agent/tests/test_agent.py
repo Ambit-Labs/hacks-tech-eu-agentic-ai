@@ -1,3 +1,5 @@
+import time
+
 import pytest
 from pydantic_ai.exceptions import UserError
 from pydantic_ai.messages import (
@@ -11,7 +13,7 @@ from pydantic_ai.messages import (
 from pydantic_ai.models.function import AgentInfo, FunctionModel
 from pydantic_ai.models.test import TestModel
 
-from agent import build_agent, build_model
+from agent import COVERAGE_TTL_SECONDS, build_agent, build_model
 from config import Settings
 from db import Database
 from tools import Deps
@@ -60,6 +62,31 @@ async def test_instructions_carry_coverage(deps):
     assert isinstance(first, ModelRequest)
     assert "camden: 2019-09 to 2019-10, 10 payments" in (first.instructions or "")
     assert "islington: 2019-09 to 2019-10, 8 payments" in (first.instructions or "")
+
+
+async def test_coverage_is_read_once_per_ttl(deps):
+    agent = build_agent(TestModel(call_tools=[], custom_output_text="ok"))
+    await agent.run("hi", deps=deps)
+
+    class Refuses:
+        async def fetch_all(self, sql, params=None):
+            raise AssertionError("coverage must come from the cache")
+
+    deps.db = Refuses()
+    result = await agent.run("hi again", deps=deps)
+    first = result.all_messages()[0]
+    assert isinstance(first, ModelRequest)
+    assert "camden: 2019-09 to 2019-10, 10 payments" in (first.instructions or "")
+
+
+async def test_stale_coverage_is_refreshed(deps):
+    deps.coverage_text = "stale"
+    deps.coverage_at = time.monotonic() - COVERAGE_TTL_SECONDS - 1
+    agent = build_agent(TestModel(call_tools=[], custom_output_text="ok"))
+    result = await agent.run("hi", deps=deps)
+    instructions = result.all_messages()[0].instructions or ""
+    assert "camden: 2019-09 to 2019-10, 10 payments" in instructions
+    assert "stale" not in instructions
 
 
 async def test_tool_call_reaches_the_database(deps):

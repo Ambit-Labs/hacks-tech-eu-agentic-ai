@@ -2,8 +2,8 @@
 
 `POST /chat` takes AI SDK messages and streams the answer back in the Vercel
 data-stream protocol, which the web app's `useChat` reads. The agent's tools
-query Postgres; the pool is opened in the lifespan and handed to each run as
-deps.
+query Postgres; the lifespan opens the pool and builds the one `Deps` every
+run shares.
 
 `app` is a module-level FastAPI instance because Vercel's Python runtime
 looks for that name in `main.py`.
@@ -37,9 +37,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.settings = settings
     app.state.agent = build_agent(build_model(settings))
     app.state.db = None
+    app.state.deps = None
     if settings.database_url:
         app.state.db = Database(settings.database_url)
         await app.state.db.open()
+        # One Deps for the process, so the coverage summary in the
+        # instructions is read once every few minutes and not per request.
+        app.state.deps = Deps(db=app.state.db)
     try:
         yield
     finally:
@@ -57,15 +61,15 @@ def _error(message: str, status: int = 500) -> JSONResponse:
 
 @app.post("/chat")
 async def chat(request: Request) -> Response:
-    db: Database | None = request.app.state.db
-    if db is None:
+    deps: Deps | None = request.app.state.deps
+    if deps is None:
         return _error(
             f"The server is missing {DATABASE_URL_ENV}. Add it to .env.local and restart the agent."
         )
     return await VercelAIAdapter.dispatch_request(
         request,
         agent=request.app.state.agent,
-        deps=Deps(db=db),
+        deps=deps,
         sdk_version=SDK_VERSION,
     )
 

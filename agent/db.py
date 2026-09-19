@@ -82,6 +82,10 @@ class Database:
         """Run one statement and return every row as a dict."""
         try:
             return await self._run(sql, params)
+        except psycopg.errors.QueryCanceled:
+            # The role's statement_timeout, not a moved server: re-resolving
+            # would cost a Modal call and run the slow query a second time.
+            raise
         except psycopg.OperationalError:
             self._url = self._resolver(self._url)
             await self.close()

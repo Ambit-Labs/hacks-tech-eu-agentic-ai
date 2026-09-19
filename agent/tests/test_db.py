@@ -45,6 +45,26 @@ async def test_reresolves_once_on_connection_error(database_url):
     assert calls == [broken]
 
 
+async def test_statement_timeout_does_not_reresolve(database_url):
+    # SET LOCAL and the slow query go as one multi-statement string: the
+    # timeout is armed when each statement starts, so set_config inside the
+    # SELECT itself would come too late to cancel it.
+    calls: list[str] = []
+
+    def resolver(url: str) -> str:
+        calls.append(url)
+        return url
+
+    db = Database(database_url, resolver=resolver)
+    await db.open()
+    try:
+        with pytest.raises(psycopg.errors.QueryCanceled):
+            await db.fetch_all("SET LOCAL statement_timeout = '100ms'; SELECT pg_sleep(1)")
+    finally:
+        await db.close()
+    assert calls == []
+
+
 async def test_gives_up_after_one_reresolve(database_url):
     broken = with_endpoint(database_url, "127.0.0.1", 1)
     db = Database(broken, resolver=lambda url: url)

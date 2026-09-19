@@ -22,6 +22,10 @@ and `DATABASE_URL`; see the table below. Without `DATABASE_URL` the server
 starts and `/chat` answers 500 naming the variable. Without the model key it
 does not start.
 
+Until a gateway key exists, put `AGENT_MODEL=google:gemini-3.6-flash` in front
+of the command so the AI Studio key is used; AI Studio accepted that model
+name on 2026-09-19.
+
 `DATABASE_URL` is built from the infra CLI: `cd ../infra && uv run pg url`
 gives the superuser URL; replace the user and password with the `agent`
 login the loader created. When the Modal container restarts and the address
@@ -34,6 +38,15 @@ this process is not needed.
   SDK's `DefaultChatTransport` posts: `id`, `messages`, `trigger`,
   `messageId`.
 - `GET /health` returns `{"status": "ok", "model": "...", "database": true}`.
+
+## How the web app reaches it
+
+`next.config.ts` rewrites `/api/agent/:path*` to `${AGENT_URL}/:path*`, so the
+browser only ever talks to its own origin and there is no CORS to configure.
+`web/src/lib/chat-backend.ts` picks the path the chat transport posts to.
+
+Start this server before the web app, or the chat gets a proxy error on the
+first message.
 
 ## Tools
 

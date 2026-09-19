@@ -1,12 +1,15 @@
 """The agent: model, instructions and tools.
 
 Instructions come in two parts. The static text says what the agent is and
-how to answer. The dynamic part runs once per request and lists which
-boroughs and months are loaded, so the model can decline a question about
-data it does not have instead of guessing.
+how to answer. The dynamic part lists which boroughs and months are loaded,
+so the model can decline a question about data it does not have instead of
+guessing. That summary costs about a second over the full dataset, so it is
+cached in the deps for COVERAGE_TTL_SECONDS rather than read per request.
 """
 
 from __future__ import annotations
+
+import time
 
 from pydantic_ai import Agent, RunContext
 from pydantic_ai.models import Model, infer_model
@@ -17,6 +20,10 @@ from config import GOOGLE_KEY_ENV, Settings
 from tools import ALL_TOOLS, Deps
 
 GOOGLE_PREFIX = "google:"
+
+# How long the coverage summary stays good. A load adds months, and the next
+# question five minutes later sees them.
+COVERAGE_TTL_SECONDS = 300
 
 INSTRUCTIONS = """\
 You are Scrooge, an assistant that answers questions about what London
@@ -71,16 +78,24 @@ def build_agent(model: Model) -> Agent[Deps, str]:
 
     @agent.instructions
     async def loaded_data(ctx: RunContext[Deps]) -> str:
-        rows = await ctx.deps.db.fetch_all(
+        deps = ctx.deps
+        age = time.monotonic() - deps.coverage_at
+        if deps.coverage_text is not None and age < COVERAGE_TTL_SECONDS:
+            return deps.coverage_text
+        rows = await deps.db.fetch_all(
             "SELECT borough, min(month) AS first, max(month) AS last, sum(payments) AS payments"
             " FROM coverage GROUP BY borough ORDER BY borough"
         )
         if not rows:
-            return "No data is loaded yet. Say so; do not answer with numbers."
-        lines = [
-            f"{r['borough']}: {r['first']:%Y-%m} to {r['last']:%Y-%m}, {r['payments']:,} payments"
-            for r in rows
-        ]
-        return "Data loaded, by borough:\n" + "\n".join(lines)
+            text = "No data is loaded yet. Say so; do not answer with numbers."
+        else:
+            lines = [
+                f"{r['borough']}: {r['first']:%Y-%m} to {r['last']:%Y-%m}, {r['payments']:,} payments"
+                for r in rows
+            ]
+            text = "Data loaded, by borough:\n" + "\n".join(lines)
+        deps.coverage_text = text
+        deps.coverage_at = time.monotonic()
+        return text
 
     return agent

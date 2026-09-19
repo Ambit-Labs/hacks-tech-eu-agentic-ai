@@ -1,10 +1,11 @@
 """The tools the agent can call. Each one is a fixed query over `payments`.
 
-The model never writes SQL. Every tool takes typed arguments, runs one
-parameterised statement as the read-only role, and returns a typed result
-with the aggregate, the row count behind it, which distinct values a
-substring filter matched, and at most ROW_LIMIT rows. Docstrings are what the
-model reads when choosing a tool, so they say what the tool answers.
+The model never writes SQL. Every tool takes typed arguments, runs fixed
+parameterised statements as the read-only role, and returns a typed result:
+the aggregate, the count and total over the whole matching set, and which
+distinct values a substring filter matched. Tools that return rows cap them
+at ROW_LIMIT. Docstrings are what the model reads when choosing a tool, so
+they say what the tool answers.
 """
 
 from __future__ import annotations
@@ -47,6 +48,10 @@ GROUP_EXPR: dict[str, str] = {
 @dataclass
 class Deps:
     db: Database
+    # The coverage summary the instructions carry, cached for the process.
+    # agent.py owns both fields; see COVERAGE_TTL_SECONDS.
+    coverage_text: str | None = None
+    coverage_at: float = 0.0
 
 
 class Matched(BaseModel):
