@@ -65,8 +65,13 @@ last dump. Expect a gap of a few minutes and a new address. `pg stop` records
 that you meant it, so the supervisor leaves a deliberately stopped server
 stopped.
 
+Nothing else stops it. `server` is declared `nonpreemptible=True`, so Modal
+does not reclaim the container for capacity. The two stops left are `pg stop`
+and the 24 hour ceiling.
+
 It bills for wall clock time. Two CPUs and 4 GB, charged the whole time the
-container is up, not per query. Run `pg stop` when you are done for the day.
+container is up, not per query, at three times the list price because the
+container is nonpreemptible. Run `pg stop` when you are done for the day.
 
 The tunnel is a public TCP address with no IP allowlist. The only thing
 between the internet and the database is the password, so `pg_hba.conf`

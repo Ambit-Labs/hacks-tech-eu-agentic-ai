@@ -54,6 +54,12 @@ def test_server_can_run_for_a_full_day(app_module):
     assert app_module.MAX_TIMEOUT == 24 * 60 * 60
 
 
+def test_server_is_not_preemptible(app_module):
+    # A preemption costs a ten minute restore, during which every query
+    # fails. Only `pg stop` and the 24 hour ceiling may end the server.
+    assert app_module.NONPREEMPTIBLE is True
+
+
 def test_pgdata_is_not_on_the_volume(app_module):
     # The whole persistence design rests on this. Modal Volumes are
     # documented as write-once read-many, so the heap stays on local disk

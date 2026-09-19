@@ -64,6 +64,15 @@ PG_PORT = 5432
 #: is killed 24 hours from now, and the supervisor starts a fresh one.
 MAX_TIMEOUT = 24 * 60 * 60
 
+#: Modal may take a preemptible container away at any moment to reclaim
+#: capacity, and that is its default. For this server a preemption is a ten
+#: minute outage, because the replacement restores the whole archive before it
+#: opens a tunnel: one at 17:06 UTC on 2026-09-19 failed production requests
+#: until 17:16. Opting out costs three times the list price for CPU and
+#: memory, and leaves `pg stop` and the 24 hour ceiling as the only stops.
+#: CPU only: Modal rejects the flag on a GPU Function.
+NONPREEMPTIBLE = True
+
 #: Seconds between dumps, overridable per run and by SCROOGE_PG_DUMP_INTERVAL.
 DEFAULT_DUMP_INTERVAL = 600
 
@@ -478,6 +487,7 @@ def _stop_requested() -> bool:
     volumes={str(DUMP_DIR): volume},
     secrets=[secret],
     timeout=MAX_TIMEOUT,
+    nonpreemptible=NONPREEMPTIBLE,
     max_containers=1,
     cpu=2.0,
     memory=4096,

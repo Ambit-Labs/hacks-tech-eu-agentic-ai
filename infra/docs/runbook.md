@@ -279,6 +279,18 @@ whenever the app was deployed, whether or not anyone wanted one running. The
 schedule plus an explicit desired state gives the same recovery and leaves
 starting and stopping under the operator's control.
 
+`server` is declared `nonpreemptible=True`. Modal's default is a preemptible
+container, which it may reclaim at any moment and restart with the same
+input. Here a restart is a full restore, about ten minutes with the payments
+loaded, and every query fails until the new tunnel opens. That happened at
+17:06 UTC on 2026-09-19: the log line is `Container terminated due to
+preemption`, and the deployed agent answered `no Postgres endpoint is
+published in Modal` until 17:16. With the flag set, the server ends for two
+reasons only, `pg stop` and the 24 hour ceiling. The price is three times the
+list rate for CPU and memory, and Modal rejects the flag on a GPU Function.
+The flag is read at deploy time, so changing it needs `pg deploy` and then a
+restart of the running server.
+
 `server` is declared `max_containers=1`, so a stray second `pg start --force`
 queues rather than running two postmasters against the same archives.
 
