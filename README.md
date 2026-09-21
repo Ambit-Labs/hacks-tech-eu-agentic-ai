@@ -1,5 +1,8 @@
 # Scrooge
 
+Built at the [Tech Europe agentic AI hack](https://hackathons.techeurope.io/events/tech-europe-agentic-ai-hack),
+2026-09-19.
+
 Where did the money go?
 
 London's 33 boroughs each publish every payment over £500 (over £250 in some)
@@ -7,8 +10,6 @@ under the transparency code, as CSVs in 33 different shapes on 33 different
 websites. Scrooge collects them, loads them into one Postgres, and puts a chat
 agent in front so you can ask the question in the title and get an answer with
 the rows behind it.
-
-Built at the hacks.tech.eu agentic AI hackathon, 2026-09-19.
 
 ## How it fits together
 
