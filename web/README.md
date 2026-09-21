@@ -46,6 +46,12 @@ The remarks mock process and never a borough, a supplier or a person. The app st
 
 A screen reader hears each step once: the visible text is `aria-hidden` and a fixed label sits beside it, so neither the rotation nor the ticking seconds is announced. With reduced motion on, the rotation, the pulse and the shimmer all stop.
 
+## Header and about page
+
+`src/components/site-header.tsx` is the header on every page. On the chat page the logo starts a new chat: `ChatShell` bumps a key and `Chat` remounts empty. Elsewhere the logo links back to `/`.
+
+`/about` is `src/app/about/page.mdx`, plain prose for readers who do not code. `@next/mdx` compiles it, `next.config.ts` adds `md` and `mdx` to `pageExtensions`, and `src/mdx-components.tsx` styles the headings, paragraphs and lists because the project has no typography plugin. The borough and payment counts on the page are typed in by hand, so update them when a borough loads.
+
 ## Settings
 
 The gear in the header carries two settings, both kept in `localStorage` by the small store in `src/lib/settings.ts`.

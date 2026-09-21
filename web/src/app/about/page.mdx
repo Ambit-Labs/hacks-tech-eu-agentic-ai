@@ -1,0 +1,123 @@
+export const metadata = {
+  title: "About Scrooge",
+  description: "What Scrooge is, which London boroughs it covers, and what it cannot tell you yet.",
+};
+
+# About Scrooge
+
+Every London council has to publish each payment it makes over £500. Some publish
+everything over £250. The rule has been in place for more than a decade, and the
+data is public. In practice almost nobody reads it, because it sits in thousands
+of spreadsheets spread over 33 council websites, and no two councils lay their
+spreadsheet out the same way.
+
+Scrooge gathers those spreadsheets into one place and lets you ask about them in
+plain English. We built it at the
+[Tech Europe agentic AI hack](https://hackathons.techeurope.io/events/tech-europe-agentic-ai-hack)
+on 19 September 2026.
+
+## How it works
+
+There are three steps, and only the last one involves AI.
+
+**Collecting.** A program visits each council's transparency page and downloads
+every spending file it finds, exactly as the council published it. We keep the
+originals so any figure can be traced back to the file it came from.
+
+**Tidying.** One council calls a column "Supplier", another "Vendor Name", a
+third "Payee". Dates and amounts come in a dozen formats. A second program reads
+each layout and writes every payment into one shared table with the same columns:
+who paid, who got paid, how much, when, and what the council said it was for.
+
+**Answering.** When you type a question, an AI model works out which lookups it
+needs, such as "total for Camden in 2024" or "largest payments to this supplier".
+It can only choose from seven fixed lookups. It cannot change the data, and it
+does not write its own database queries. The results come back as the tables and
+charts you see in the chat, and the model writes the sentences around them.
+
+That split matters when you check an answer. The numbers in the cards come
+straight from the council's files. The sentences come from the AI. If the two
+disagree, believe the card.
+
+## What you can ask today
+
+Scrooge holds **15 of London's 33 boroughs**, about **15 million payments** that
+add up to roughly £83 billion:
+
+- Barnet, Bexley, Brent, Camden, Haringey
+- Havering, Hounslow, Islington, Lambeth, Lewisham
+- Newham, Redbridge, Richmond, Wandsworth, Westminster
+
+How far back it goes depends on the council. Barnet, Hounslow and Lambeth have
+more than ten years of payments. Haringey and Lewisham start in 2023. The newest
+payments are from summer 2026.
+
+Questions that work well:
+
+- How much did a borough spend in a given year, and on what?
+- Who are a borough's biggest suppliers?
+- How much has one company been paid, by one council or by all of them?
+- What were the largest single payments?
+- How do two boroughs compare?
+
+If you are not sure what is covered, ask "what data do you have?" and Scrooge
+will list each borough with its date range.
+
+## Limitations
+
+**More than half of London is missing.** Eighteen boroughs are not in yet. Five
+of them put their files behind bot protection, and we have chosen not to work
+around that. The other thirteen are researched and waiting for someone to write
+their reader.
+
+**It is not the whole of a council's spending.** Payments under the £500 or £250
+threshold are not published. Neither are salaries, and councils redact payments
+to individuals, such as foster carers or people receiving care budgets. A
+borough's total here will be lower than the figure in its annual accounts.
+
+**Supplier names are as the council typed them.** The same company can appear as
+"Veolia", "Veolia ES (UK) Ltd" and "VEOLIA ENVIRONMENTAL". Scrooge matches on the
+text, so it can miss a spelling, and it can match too much. Ask about Capita and
+it also picks up every payment described as "capital".
+
+**Categories do not line up between councils.** Each council has its own
+departments and its own labels for what a payment was for. Comparing total spend
+between boroughs is sound. Comparing "housing" in one with "housing" in another
+is rough.
+
+**Lists stop at 50 rows.** Totals and rankings are worked out over every payment,
+but a list of individual payments shows 50 at most.
+
+**The source files have mistakes in them.** A handful of Redbridge payments are
+dated in the 2030s. Some councils publish refunds as negative amounts, which we
+keep as they are. We fix how we read a file, never what the council wrote.
+
+**The AI can misread a question.** It may pick the wrong year or the wrong
+borough, or give up on a question that needs too many lookups. Check that the
+card shows what you meant to ask. Scrooge also forgets everything when you start
+a new chat.
+
+## What is next: budgets
+
+Knowing what a council spent is half the story. The other half is what it said
+it would spend.
+
+We already download the budget side: the returns every council files with central
+government each year, which cover all 33 boroughs, the London council tax
+figures, and the full budget books of ten boroughs. None of it is in the database
+yet, so Scrooge cannot answer budget questions today.
+
+The plan is to load those figures next to the payments, so you can ask whether a
+borough spent more on temporary accommodation than it budgeted, or how its
+planned spending on adult social care has moved over five years. Budget books
+are long PDFs rather than spreadsheets, so that work is harder than the payments
+were.
+
+After budgets come the thirteen boroughs still waiting for a reader.
+
+## Source and contact
+
+Scrooge is open source under the MIT licence. The code, the research on where
+each borough publishes, and the list of known problems are on
+[GitHub](https://github.com/Ambit-Labs/scrooge). If a figure looks wrong, an
+issue there is the fastest way to tell us.
