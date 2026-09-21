@@ -48,7 +48,7 @@ A screen reader hears each step once: the visible text is `aria-hidden` and a fi
 
 ## Header and about page
 
-`src/components/site-header.tsx` is the header on every page. On the chat page the logo starts a new chat: `ChatShell` bumps a key and `Chat` remounts empty. Elsewhere the logo links back to `/`. The coffee icon is a plain link to Buy Me a Coffee, so the chat page loads no third-party script.
+`src/components/site-header.tsx` is the header on every page. On the chat page a "New chat" button appears in the header once the conversation has a message, and the logo does the same thing: `ChatShell` bumps a key and `Chat` remounts empty. `Chat` reports whether it is empty through `onEmptyChange`, and stops any running request when it unmounts so a cleared answer does not keep streaming. Elsewhere the logo links back to `/`. The coffee icon is a plain link to Buy Me a Coffee, so the chat page loads no third-party script.
 
 `/about` is `src/app/about/page.mdx`, plain prose for readers who do not code. `@next/mdx` compiles it, `next.config.ts` adds `md` and `mdx` to `pageExtensions`, and `src/mdx-components.tsx` styles the headings, paragraphs and lists because the project has no typography plugin. The borough and payment counts on the page are typed in by hand, so update them when a borough loads.
 

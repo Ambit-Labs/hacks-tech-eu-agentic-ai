@@ -14,11 +14,12 @@ import { SiteHeader } from "@/components/site-header";
 
 export function ChatShell() {
   const [chatKey, setChatKey] = useState(0);
+  const [isEmpty, setIsEmpty] = useState(true);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <SiteHeader onNewChat={() => setChatKey((key) => key + 1)} />
-      <Chat key={chatKey} />
+      <SiteHeader onNewChat={() => setChatKey((key) => key + 1)} showNewChat={!isEmpty} />
+      <Chat key={chatKey} onEmptyChange={setIsEmpty} />
     </div>
   );
 }

@@ -7,7 +7,7 @@
  * Everywhere else the logo is a link back to the chat.
  */
 
-import { CoffeeIcon } from "lucide-react";
+import { CoffeeIcon, SquarePenIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -38,7 +38,14 @@ function Brand() {
   );
 }
 
-export function SiteHeader({ onNewChat }: { onNewChat?: () => void }) {
+export function SiteHeader({
+  onNewChat,
+  showNewChat = false,
+}: {
+  onNewChat?: () => void;
+  /** True once the conversation has a message, so there is something to clear. */
+  showNewChat?: boolean;
+}) {
   return (
     <header className="flex items-center justify-between gap-3 border-b px-4 py-3 sm:px-6">
       {onNewChat ? (
@@ -56,6 +63,13 @@ export function SiteHeader({ onNewChat }: { onNewChat?: () => void }) {
         </Link>
       )}
       <div className="flex items-center gap-1">
+        {onNewChat && showNewChat ? (
+          <Button aria-label="New chat" onClick={onNewChat} size="sm" variant="outline">
+            <SquarePenIcon />
+            {/* Icon only on a phone, where the header is already full. */}
+            <span className="hidden sm:inline">New chat</span>
+          </Button>
+        ) : null}
         <Button asChild size="sm" variant="ghost">
           <Link href="/about">About</Link>
         </Button>

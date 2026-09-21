@@ -3,7 +3,7 @@
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, isToolUIPart } from "ai";
 import Image from "next/image";
-import { Fragment, useCallback, useMemo } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef } from "react";
 
 import {
   Conversation,
@@ -77,7 +77,7 @@ function AnswerHeader({ isLive, isResponding }: { isLive: boolean; isResponding:
   return <Scrooge pose="checking" />;
 }
 
-export function Chat() {
+export function Chat({ onEmptyChange }: { onEmptyChange?: (isEmpty: boolean) => void }) {
   const showToolCalls = useShowToolCalls();
   const transport = useMemo(() => new DefaultChatTransport({ api: CHAT_API_PATH }), []);
   const { messages, sendMessage, status, error, regenerate, clearError, stop } = useChat({
@@ -111,6 +111,19 @@ export function Chat() {
   }, [clearError, regenerate]);
 
   const isEmpty = messages.length === 0;
+
+  // The header only offers "New chat" once there is something to clear.
+  useEffect(() => {
+    onEmptyChange?.(isEmpty);
+  }, [isEmpty, onEmptyChange]);
+
+  // "New chat" remounts this component. Without this the old request would
+  // keep streaming with nobody reading it, and keep billing the model.
+  const stopRef = useRef(stop);
+  useEffect(() => {
+    stopRef.current = stop;
+  }, [stop]);
+  useEffect(() => () => void stopRef.current(), []);
 
   // A running tool call draws its own line. Any other moment of a streaming
   // answer, the text being written or the pause between two steps, gets this one.
