@@ -3,9 +3,8 @@
 /**
  * The settings popover in the header.
  *
- * It is a client component of its own so the page around it stays a server
- * component. The values live in `@/lib/settings`, which the conversation reads
- * from the same store.
+ * The values live in `@/lib/settings`, which the conversation reads from the
+ * same store.
  */
 
 import { MonitorIcon, MoonIcon, SettingsIcon, SunIcon } from "lucide-react";
