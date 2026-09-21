@@ -48,9 +48,11 @@ A screen reader hears each step once: the visible text is `aria-hidden` and a fi
 
 ## Header and about page
 
-`src/components/site-header.tsx` is the header on every page. On the chat page the logo starts a new chat: `ChatShell` bumps a key and `Chat` remounts empty. Elsewhere the logo links back to `/`.
+`src/components/site-header.tsx` is the header on every page. On the chat page the logo starts a new chat: `ChatShell` bumps a key and `Chat` remounts empty. Elsewhere the logo links back to `/`. The coffee icon is a plain link to Buy Me a Coffee, so the chat page loads no third-party script.
 
 `/about` is `src/app/about/page.mdx`, plain prose for readers who do not code. `@next/mdx` compiles it, `next.config.ts` adds `md` and `mdx` to `pageExtensions`, and `src/mdx-components.tsx` styles the headings, paragraphs and lists because the project has no typography plugin. The borough and payment counts on the page are typed in by hand, so update them when a borough loads.
+
+The page ends with a Buy Me a Coffee button, `src/components/bmc-button.tsx`. Their embed script draws the button with `document.writeln`, which does nothing in a React page, so the component loads the script without its `data-name` attribute and calls the `window.bmcBtnWidget` function it defines. Until the script loads, or if a blocker stops it, a plain link to the same address shows instead.
 
 ## Settings
 

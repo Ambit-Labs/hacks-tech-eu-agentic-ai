@@ -7,6 +7,7 @@
  * Everywhere else the logo is a link back to the chat.
  */
 
+import { CoffeeIcon } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 
@@ -16,6 +17,7 @@ import { ChatSettings } from "@/components/chat/settings";
 import { Button } from "@/components/ui/button";
 
 const GITHUB_URL = "https://github.com/Ambit-Labs/scrooge";
+const BMC_URL = "https://buymeacoffee.com/scrooge.fiy";
 
 // lucide-react dropped its brand icons, so the mark is inlined.
 function GithubIcon() {
@@ -56,6 +58,12 @@ export function SiteHeader({ onNewChat }: { onNewChat?: () => void }) {
       <div className="flex items-center gap-1">
         <Button asChild size="sm" variant="ghost">
           <Link href="/about">About</Link>
+        </Button>
+        {/* A plain link. The branded button and its script stay on /about. */}
+        <Button asChild size="icon-sm" variant="ghost">
+          <a aria-label="Buy us a coffee" href={BMC_URL} rel="noreferrer" target="_blank">
+            <CoffeeIcon />
+          </a>
         </Button>
         <Button asChild size="icon-sm" variant="ghost">
           <a aria-label="Source on GitHub" href={GITHUB_URL} rel="noreferrer" target="_blank">
